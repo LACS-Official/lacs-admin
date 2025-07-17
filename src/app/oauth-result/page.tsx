@@ -1,8 +1,17 @@
 "use client"
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
+
+interface GitHubUser {
+  login: string
+  name: string
+  email: string
+  avatar_url: string
+  html_url: string
+}
 
 export default function OAuthResult() {
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<GitHubUser | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -34,7 +43,13 @@ export default function OAuthResult() {
   return (
     <div style={{ textAlign: 'center', marginTop: 100 }}>
       <h2>登录成功！</h2>
-      <img src={user.avatar_url} alt={user.login} width={80} style={{ borderRadius: 40, margin: 20 }} />
+      <Image
+        src={user.avatar_url}
+        alt={user.login}
+        width={80}
+        height={80}
+        style={{ borderRadius: 40, margin: 20 }}
+      />
       <div>用户名：{user.login}</div>
       <div>昵称：{user.name}</div>
       <div>邮箱：{user.email}</div>
