@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import styles from './page.module.css'
 import Navigation from '@/components/Navigation'
@@ -37,108 +37,124 @@ interface HugoArticle {
   content: string
 }
 
-// 模拟数据
-const mockArticles: HugoArticle[] = [
-  {
-    id: '1',
-    title: 'Visual Studio Code',
-    date: '2023-08-15T14:30:00+08:00',
-    draft: false,
-    categories: ['开发工具'],
-    tags: ['编程', '工具', 'IDE'],
-    version: '1.80.1',
-    size: '85MB',
-    downloads: {
-      official: 'https://code.visualstudio.com/download',
-      quark: 'https://example.com/vscode-quark',
-      netdisk: 'http://example.com/vscode-123',
-      baidu: 'https://pan.baidu.com/s/1vscode_example',
-      thunder: 'thunder://example.com/vscode'
-    },
-    official_website: 'https://code.visualstudio.com',
-    platforms: ['Windows', 'macOS', 'Linux'],
-    system_requirements: {
-      Windows: [
-        'Windows 10 或更高版本（64位）',
-        '1.6 GHz以上处理器',
-        '1GB RAM',
-        '200MB可用硬盘空间'
-      ],
-      macOS: [
-        'macOS 10.15 Catalina或更高版本',
-        'Intel或Apple Silicon处理器',
-        '1GB RAM',
-        '200MB可用硬盘空间'
-      ],
-      Linux: [
-        'Ubuntu 16.04, Debian 9或更高版本',
-        '1.6 GHz以上处理器',
-        '1GB RAM',
-        '200MB可用硬盘空间'
-      ]
-    },
-    changelog: [
-      '改进了远程开发体验',
-      '增强了AI辅助编码功能',
-      '优化了性能和内存使用',
-      '修复了多个已知问题'
-    ],
-    previous_versions: [
-      {
-        version: '1.79.0',
-        date: '2023-07-10',
-        changes: [
-          '添加了新的主题选项',
-          '改进了搜索功能',
-          '更新了内置终端'
-        ]
-      }
-    ],
-    image: '/images/vscode-banner.jpg',
-    content: 'Visual Studio Code 是一个轻量级但功能强大的源代码编辑器...'
-  },
-  {
-    id: '2',
-    title: 'IntelliJ IDEA',
-    date: '2023-08-10T10:00:00+08:00',
-    draft: false,
-    categories: ['开发工具'],
-    tags: ['Java', 'IDE', '开发'],
-    version: '2023.2',
-    size: '650MB',
-    downloads: {
-      official: 'https://www.jetbrains.com/idea/download/',
-      baidu: 'https://pan.baidu.com/s/1idea_example'
-    },
-    official_website: 'https://www.jetbrains.com/idea/',
-    platforms: ['Windows', 'macOS', 'Linux'],
-    content: 'IntelliJ IDEA 是一个功能强大的Java集成开发环境...'
-  }
-]
-
 export default function HugoManagement() {
   const params = useParams()
   const router = useRouter()
-  const [articles, setArticles] = useState<HugoArticle[]>(mockArticles)
+  const [articles, setArticles] = useState<HugoArticle[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterDraft, setFilterDraft] = useState<'all' | 'published' | 'draft'>('all')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
+
+  // 获取所有md文件
+  useEffect(() => {
+    const fetchArticles = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('github_access_token') : null
+        if (!token) {
+          setError('未检测到GitHub登录令牌，请重新登录')
+          setLoading(false)
+          return
+        }
+        // 递归获取content目录下所有文件
+        const treeRes = await fetch('https://api.github.com/repos/LACS-Official/appwebsite-hugo/git/trees/main?recursive=1', {
+          headers: {
+            Authorization: `token ${token}`,
+            Accept: 'application/vnd.github+json',
+          },
+        })
+        if (!treeRes.ok) throw new Error('获取仓库文件树失败: ' + treeRes.status)
+        const treeData = await treeRes.json()
+        const mdFiles = (treeData.tree || []).filter((item: any) =>
+          typeof item.path === 'string' && item.path.startsWith('content/') && item.path.endsWith('.md') && item.type === 'blob'
+        )
+        // 并发获取每个md文件内容
+        const articlePromises = mdFiles.map(async (file: any) => {
+          const fileRes = await fetch(`https://api.github.com/repos/LACS-Official/appwebsite-hugo/contents/${file.path}`, {
+            headers: {
+              Authorization: `token ${token}`,
+              Accept: 'application/vnd.github+json',
+            },
+          })
+          if (!fileRes.ok) return null
+          const fileData = await fileRes.json()
+          // 解析base64内容
+          const contentRaw = typeof fileData.content === 'string' ? atob(fileData.content.replace(/\n/g, '')) : ''
+          // 解析frontmatter
+          const match = contentRaw.match(/^---([\s\S]*?)---\s*([\s\S]*)$/)
+          let frontmatter: any = {}
+          let body = contentRaw
+          if (match) {
+            // 简单YAML解析
+            const yaml = match[1]
+            body = match[2]
+            yaml.split(/\r?\n/).forEach(line => {
+              const idx = line.indexOf(':')
+              if (idx > -1) {
+                const key = line.slice(0, idx).trim()
+                let value = line.slice(idx + 1).trim()
+                if (value.startsWith('[') && value.endsWith(']')) {
+                  // 数组
+                  value = value.slice(1, -1).split(',').map(v => v.trim().replace(/^"|"$/g, ''))
+                } else if (value === 'true' || value === 'false') {
+                  value = value === 'true'
+                } else if (/^".*"$/.test(value)) {
+                  value = value.slice(1, -1)
+                }
+                frontmatter[key] = value
+              }
+            })
+          }
+          return {
+            id: file.sha,
+            title: frontmatter.title || file.path.split('/').pop().replace(/\.md$/, ''),
+            date: frontmatter.date || '',
+            draft: frontmatter.draft ?? false,
+            categories: frontmatter.categories || [],
+            tags: frontmatter.tags || [],
+            version: frontmatter.version,
+            size: frontmatter.size,
+            downloads: frontmatter.downloads,
+            official_website: frontmatter.official_website,
+            platforms: frontmatter.platforms,
+            system_requirements: frontmatter.system_requirements,
+            changelog: frontmatter.changelog,
+            previous_versions: frontmatter.previous_versions,
+            image: frontmatter.image,
+            content: body,
+            path: file.path,
+            sha: file.sha,
+          } as HugoArticle & { path: string; sha: string }
+        })
+        const articles = (await Promise.all(articlePromises)).filter(Boolean) as (HugoArticle & { path: string; sha: string })[]
+        setArticles(articles)
+      } catch (e) {
+        setError(e instanceof Error ? e.message : '获取文章失败')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchArticles()
+  }, [])
 
   // 获取所有分类
   const categories = Array.from(new Set(articles.flatMap(article => article.categories)))
 
   // 过滤文章
   const filteredArticles = articles.filter(article => {
-    const matchesSearch = article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         article.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-    
-    const matchesDraft = filterDraft === 'all' || 
-                        (filterDraft === 'published' && !article.draft) ||
-                        (filterDraft === 'draft' && article.draft)
-    
-    const matchesCategory = selectedCategory === 'all' || 
-                           article.categories.includes(selectedCategory)
-    
+    const title = String(article.title || '')
+    const tags = Array.isArray(article.tags) ? article.tags : []
+    const categories = Array.isArray(article.categories) ? article.categories : []
+    const matchesSearch = title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      tags.some(tag => String(tag).toLowerCase().includes(searchTerm.toLowerCase()))
+    const matchesDraft = filterDraft === 'all' ||
+      (filterDraft === 'published' && article.draft === false) ||
+      (filterDraft === 'draft' && article.draft === true)
+    const matchesCategory = selectedCategory === 'all' ||
+      categories.map(String).includes(String(selectedCategory))
     return matchesSearch && matchesDraft && matchesCategory
   })
 
@@ -154,9 +170,7 @@ export default function HugoManagement() {
 
   // 处理删除文章
   const handleDeleteArticle = (articleId: string) => {
-    if (confirm('确定要删除这篇文章吗？')) {
-      setArticles(prev => prev.filter(article => article.id !== articleId))
-    }
+    alert('请在后续版本中实现通过GitHub API删除md文件')
   }
 
   // 处理发布/取消发布
@@ -168,6 +182,8 @@ export default function HugoManagement() {
 
   return (
     <div className={styles.hugoManagement}>
+      {loading && <div style={{textAlign:'center',padding:'2rem'}}>正在加载文章...</div>}
+      {error && <div style={{color:'red',textAlign:'center',padding:'2rem'}}>{error}</div>}
       {/* 导航栏 */}
       <Navigation />
 
