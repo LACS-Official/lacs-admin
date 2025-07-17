@@ -34,6 +34,10 @@ interface HugoFrontmatter {
   image?: string
 }
 
+function isPlainObject(val: unknown): val is object {
+  return typeof val === 'object' && val !== null && !Array.isArray(val);
+}
+
 export default function NewHugoArticle() {
   const params = useParams()
   const router = useRouter()
@@ -49,11 +53,9 @@ export default function NewHugoArticle() {
   const [content, setContent] = useState('')
   const [categoryInput, setCategoryInput] = useState('')
   const [tagInput, setTagInput] = useState('')
-  const [platformInput, setPlatformInput] = useState('')
-  const [changelogInput, setChangelogInput] = useState('')
   
   // 处理基础字段更新
-  const updateFrontmatter = (field: keyof HugoFrontmatter, value: any) => {
+  const updateFrontmatter = (field: keyof HugoFrontmatter, value: unknown) => {
     setFrontmatter(prev => ({ ...prev, [field]: value }))
   }
   
@@ -74,63 +76,47 @@ export default function NewHugoArticle() {
     updateFrontmatter(field, currentArray.filter(item => item !== value))
   }
   
-  // 处理下载链接更新
-  const updateDownloads = (platform: string, url: string) => {
-    setFrontmatter(prev => ({
-      ...prev,
-      downloads: {
-        ...prev.downloads,
-        [platform]: url || undefined
-      }
-    }))
-  }
-  
-  // 处理系统要求更新
-  const updateSystemRequirements = (platform: string, requirements: string[]) => {
-    setFrontmatter(prev => ({
-      ...prev,
-      system_requirements: {
-        ...prev.system_requirements,
-        [platform]: requirements
-      }
-    }))
-  }
-  
   // 生成Markdown内容
   const generateMarkdown = () => {
-    const frontmatterObj: any = { ...frontmatter }
+    const frontmatterObj: Record<string, unknown> = { ...frontmatter }
     
     // 清理空值
     Object.keys(frontmatterObj).forEach(key => {
-      const value = frontmatterObj[key]
-      if (value === undefined || value === null || value === '' || 
-          (Array.isArray(value) && value.length === 0) ||
-          (typeof value === 'object' && Object.keys(value).length === 0)) {
-        delete frontmatterObj[key]
+      const value = frontmatterObj[key];
+      if (
+        value === undefined ||
+        value === null ||
+        value === '' ||
+        (Array.isArray(value) && value.length === 0) ||
+        (isPlainObject(value) && Object.keys(value).length === 0)
+      ) {
+        delete frontmatterObj[key];
       }
     })
     
     // 清理downloads中的空值
-    if (frontmatterObj.downloads) {
-      Object.keys(frontmatterObj.downloads).forEach(key => {
-        if (!frontmatterObj.downloads[key]) {
-          delete frontmatterObj.downloads[key]
+    if (frontmatterObj.downloads && typeof frontmatterObj.downloads === 'object' && frontmatterObj.downloads !== null) {
+      const downloadsObj = frontmatterObj.downloads as Record<string, unknown>;
+      Object.keys(downloadsObj).forEach(key => {
+        if (!downloadsObj[key]) {
+          delete downloadsObj[key];
         }
-      })
-      if (Object.keys(frontmatterObj.downloads).length === 0) {
-        delete frontmatterObj.downloads
+      });
+      if (Object.keys(downloadsObj).length === 0) {
+        delete frontmatterObj.downloads;
       }
     }
     
     // 清理system_requirements中的空值
-    if (frontmatterObj.system_requirements) {
-      Object.keys(frontmatterObj.system_requirements).forEach(key => {
-        if (!frontmatterObj.system_requirements[key] || frontmatterObj.system_requirements[key].length === 0) {
-          delete frontmatterObj.system_requirements[key]
+    if (frontmatterObj.system_requirements && typeof frontmatterObj.system_requirements === 'object' && frontmatterObj.system_requirements !== null) {
+      const sysReqObj = frontmatterObj.system_requirements as Record<string, unknown[]>;
+      Object.keys(sysReqObj).forEach(key => {
+        if (!sysReqObj[key] || sysReqObj[key].length === 0) {
+          delete sysReqObj[key];
         }
-      })
-      if (Object.keys(frontmatterObj.system_requirements).length === 0) {
-        delete frontmatterObj.system_requirements
+      });
+      if (Object.keys(sysReqObj).length === 0) {
+        delete frontmatterObj.system_requirements;
       }
     }
     

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import styles from './page.module.css'
 import Navigation from '@/components/Navigation'
@@ -210,7 +210,7 @@ export default function HugoManagement() {
 
         <select 
           value={filterDraft} 
-          onChange={(e) => setFilterDraft(e.target.value as any)}
+          onChange={(e) => setFilterDraft(e.target.value as unknown as 'all' | 'published' | 'draft')}
           className={styles.filterSelect}
         >
           <option value="all">所有文章</option>

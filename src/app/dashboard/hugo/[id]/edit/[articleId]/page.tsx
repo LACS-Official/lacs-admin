@@ -94,6 +94,10 @@ const mockArticleData = {
   content: 'Visual Studio Code 是一个轻量级但功能强大的源代码编辑器，运行在桌面上，可用于 Windows、macOS 和 Linux。它内置了对 JavaScript、TypeScript 和 Node.js 的支持，并为其他语言（如 C++、C#、Java、Python、PHP、Go）和运行时（如 .NET 和 Unity）提供了丰富的扩展生态系统。'
 }
 
+function isPlainObject(val: unknown): val is object {
+  return typeof val === 'object' && val !== null && !Array.isArray(val);
+}
+
 export default function EditHugoArticle() {
   const params = useParams()
   const router = useRouter()
@@ -109,8 +113,6 @@ export default function EditHugoArticle() {
   const [content, setContent] = useState('')
   const [categoryInput, setCategoryInput] = useState('')
   const [tagInput, setTagInput] = useState('')
-  const [platformInput, setPlatformInput] = useState('')
-  const [changelogInput, setChangelogInput] = useState('')
   const [loading, setLoading] = useState(true)
   
   // 加载文章数据
@@ -140,7 +142,7 @@ export default function EditHugoArticle() {
   }, [params.articleId])
   
   // 处理基础字段更新
-  const updateFrontmatter = (field: keyof HugoFrontmatter, value: any) => {
+  const updateFrontmatter = (field: keyof HugoFrontmatter, value: unknown) => {
     setFrontmatter(prev => ({ ...prev, [field]: value }))
   }
   
@@ -161,40 +163,47 @@ export default function EditHugoArticle() {
     updateFrontmatter(field, currentArray.filter(item => item !== value))
   }
   
-  // 处理下载链接更新
-  const updateDownloads = (platform: string, url: string) => {
-    setFrontmatter(prev => ({
-      ...prev,
-      downloads: {
-        ...prev.downloads,
-        [platform]: url || undefined
-      }
-    }))
-  }
-  
   // 生成Markdown内容
   const generateMarkdown = () => {
-    const frontmatterObj: any = { ...frontmatter }
+    const frontmatterObj: Record<string, unknown> = { ...frontmatter }
     
     // 清理空值
     Object.keys(frontmatterObj).forEach(key => {
-      const value = frontmatterObj[key]
-      if (value === undefined || value === null || value === '' || 
-          (Array.isArray(value) && value.length === 0) ||
-          (typeof value === 'object' && Object.keys(value).length === 0)) {
-        delete frontmatterObj[key]
+      const value = frontmatterObj[key];
+      if (
+        value === undefined ||
+        value === null ||
+        value === '' ||
+        (Array.isArray(value) && value.length === 0) ||
+        (isPlainObject(value) && Object.keys(value).length === 0)
+      ) {
+        delete frontmatterObj[key];
       }
     })
     
     // 清理downloads中的空值
-    if (frontmatterObj.downloads) {
-      Object.keys(frontmatterObj.downloads).forEach(key => {
-        if (!frontmatterObj.downloads[key]) {
-          delete frontmatterObj.downloads[key]
+    if (frontmatterObj.downloads && typeof frontmatterObj.downloads === 'object' && frontmatterObj.downloads !== null) {
+      const downloadsObj = frontmatterObj.downloads as Record<string, unknown>;
+      Object.keys(downloadsObj).forEach(key => {
+        if (!downloadsObj[key]) {
+          delete downloadsObj[key];
         }
-      })
-      if (Object.keys(frontmatterObj.downloads).length === 0) {
-        delete frontmatterObj.downloads
+      });
+      if (Object.keys(downloadsObj).length === 0) {
+        delete frontmatterObj.downloads;
+      }
+    }
+    
+    // 清理system_requirements中的空值
+    if (frontmatterObj.system_requirements && typeof frontmatterObj.system_requirements === 'object' && frontmatterObj.system_requirements !== null) {
+      const sysReqObj = frontmatterObj.system_requirements as Record<string, unknown[]>;
+      Object.keys(sysReqObj).forEach(key => {
+        if (!sysReqObj[key] || sysReqObj[key].length === 0) {
+          delete sysReqObj[key];
+        }
+      });
+      if (Object.keys(sysReqObj).length === 0) {
+        delete frontmatterObj.system_requirements;
       }
     }
     
