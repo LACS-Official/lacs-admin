@@ -177,7 +177,10 @@ export default function HugoManagement() {
   }
 
   // 处理编辑文章
-  const handleEditArticle = (articleId: string) => {
+  const handleEditArticle = (articleId: string, filePath?: string) => {
+    if (typeof window !== 'undefined' && filePath) {
+      window.sessionStorage.setItem('edit_article_path', filePath)
+    }
     router.push(`/dashboard/hugo/${params.id}/edit/${articleId}`)
   }
 
@@ -283,7 +286,7 @@ export default function HugoManagement() {
               <div className={styles.articleActions}>
                 <button 
                   className={styles.actionButton}
-                  onClick={() => handleEditArticle(article.id)}
+                  onClick={() => handleEditArticle(article.id, (article as any).path)}
                   title="编辑文章"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

@@ -34,64 +34,16 @@ interface HugoFrontmatter {
   image?: string
 }
 
-// 模拟获取文章数据
-const mockArticleData = {
-  id: '1',
-  title: 'Visual Studio Code',
-  date: '2023-08-15T14:30:00+08:00',
-  draft: false,
-  categories: ['开发工具'],
-  tags: ['编程', '工具', 'IDE'],
-  version: '1.80.1',
-  size: '85MB',
-  downloads: {
-    official: 'https://code.visualstudio.com/download',
-    quark: 'https://example.com/vscode-quark',
-    netdisk: 'http://example.com/vscode-123',
-    baidu: 'https://pan.baidu.com/s/1vscode_example',
-    thunder: 'thunder://example.com/vscode'
-  },
-  official_website: 'https://code.visualstudio.com',
-  platforms: ['Windows', 'macOS', 'Linux'],
-  system_requirements: {
-    Windows: [
-      'Windows 10 或更高版本（64位）',
-      '1.6 GHz以上处理器',
-      '1GB RAM',
-      '200MB可用硬盘空间'
-    ],
-    macOS: [
-      'macOS 10.15 Catalina或更高版本',
-      'Intel或Apple Silicon处理器',
-      '1GB RAM',
-      '200MB可用硬盘空间'
-    ],
-    Linux: [
-      'Ubuntu 16.04, Debian 9或更高版本',
-      '1.6 GHz以上处理器',
-      '1GB RAM',
-      '200MB可用硬盘空间'
-    ]
-  },
-  changelog: [
-    '改进了远程开发体验',
-    '增强了AI辅助编码功能',
-    '优化了性能和内存使用',
-    '修复了多个已知问题'
-  ],
-  previous_versions: [
-    {
-      version: '1.79.0',
-      date: '2023-07-10',
-      changes: [
-        '添加了新的主题选项',
-        '改进了搜索功能',
-        '更新了内置终端'
-      ]
-    }
-  ],
-  image: '/images/vscode-banner.jpg',
-  content: 'Visual Studio Code 是一个轻量级但功能强大的源代码编辑器，运行在桌面上，可用于 Windows、macOS 和 Linux。它内置了对 JavaScript、TypeScript 和 Node.js 的支持，并为其他语言（如 C++、C#、Java、Python、PHP、Go）和运行时（如 .NET 和 Unity）提供了丰富的扩展生态系统。'
+// 兼容utf-8的base64解码
+function base64ToUtf8(str: string): string {
+  if (typeof window !== 'undefined' && window.atob) {
+    const binary = window.atob(str)
+    const bytes = Uint8Array.from(binary, c => c.charCodeAt(0))
+    return new TextDecoder('utf-8').decode(bytes)
+  } else {
+    // Node.js 环境
+    return Buffer.from(str, 'base64').toString('utf-8')
+  }
 }
 
 function isPlainObject(val: unknown): val is object {
@@ -115,30 +67,84 @@ export default function EditHugoArticle() {
   const [tagInput, setTagInput] = useState('')
   const [loading, setLoading] = useState(true)
   
-  // 加载文章数据
+  // 动态加载指定md文件内容
   useEffect(() => {
-    // 模拟API调用
-    setTimeout(() => {
-      const article = mockArticleData
-      setFrontmatter({
-        title: article.title,
-        date: article.date,
-        draft: article.draft,
-        categories: article.categories,
-        tags: article.tags,
-        version: article.version,
-        size: article.size,
-        downloads: article.downloads,
-        official_website: article.official_website,
-        platforms: article.platforms,
-        system_requirements: article.system_requirements,
-        changelog: article.changelog,
-        previous_versions: article.previous_versions,
-        image: article.image,
-      })
-      setContent(article.content)
-      setLoading(false)
-    }, 500)
+    const fetchArticle = async () => {
+      setLoading(true)
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('github_access_token') : null
+        if (!token) {
+          alert('未检测到GitHub登录令牌，请重新登录')
+          setLoading(false)
+          return
+        }
+        // 约定：articleId为文件sha，path通过query参数或localStorage传递
+        let filePath = ''
+        if (typeof window !== 'undefined') {
+          filePath = window.sessionStorage.getItem('edit_article_path') || ''
+        }
+        if (!filePath) {
+          alert('未找到文章文件路径，无法加载')
+          setLoading(false)
+          return
+        }
+        const fileRes = await fetch(`https://api.github.com/repos/LACS-Official/appwebsite-hugo/contents/${filePath}`, {
+          headers: {
+            Authorization: `token ${token}`,
+            Accept: 'application/vnd.github+json',
+          },
+        })
+        if (!fileRes.ok) throw new Error('获取文章内容失败: ' + fileRes.status)
+        const fileData = await fileRes.json()
+        const contentRaw = typeof fileData.content === 'string' ? base64ToUtf8(fileData.content.replace(/\n/g, '')) : ''
+        // 解析frontmatter
+        const match = contentRaw.match(/^---([\s\S]*?)---\s*([\s\S]*)$/)
+        const frontmatter: Record<string, unknown> = {}
+        let body = contentRaw
+        if (match) {
+          const yaml = match[1]
+          body = match[2]
+          yaml.split(/\r?\n/).forEach(line => {
+            const idx = line.indexOf(':')
+            if (idx > -1) {
+              const key = line.slice(0, idx).trim()
+              const value = line.slice(idx + 1).trim()
+              if (value.startsWith('[') && value.endsWith(']')) {
+                frontmatter[key] = value.slice(1, -1).split(',').map(v => v.trim().replace(/^\"|\"$/g, ''))
+              } else if (value === 'true' || value === 'false') {
+                frontmatter[key] = value === 'true'
+              } else if (/^\".*\"$/.test(value)) {
+                frontmatter[key] = value.slice(1, -1)
+              } else {
+                frontmatter[key] = value
+              }
+            }
+          })
+        }
+        setFrontmatter({
+          title: frontmatter.title as string || '',
+          date: frontmatter.date as string || new Date().toISOString(),
+          draft: frontmatter.draft as boolean ?? true,
+          categories: (frontmatter.categories as string[]) || [],
+          tags: (frontmatter.tags as string[]) || [],
+          version: frontmatter.version as string,
+          size: frontmatter.size as string,
+          downloads: frontmatter.downloads as any,
+          official_website: frontmatter.official_website as string,
+          platforms: frontmatter.platforms as string[],
+          system_requirements: frontmatter.system_requirements as any,
+          changelog: frontmatter.changelog as string[],
+          previous_versions: frontmatter.previous_versions as any,
+          image: frontmatter.image as string,
+        })
+        setContent(body)
+      } catch (e) {
+        alert(e instanceof Error ? e.message : '加载文章失败')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchArticle()
   }, [params.articleId])
   
   // 处理基础字段更新
@@ -233,18 +239,65 @@ export default function EditHugoArticle() {
   }
   
   // 处理保存
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!frontmatter.title.trim()) {
       alert('请输入文章标题')
       return
     }
-    
     const markdown = generateMarkdown()
-    console.log('Generated Markdown:', markdown)
-    
-    // 这里应该调用API更新文章
-    alert('文章更新成功！')
-    router.push(`/dashboard/hugo/${params.id}`)
+    // 获取path
+    let filePath = ''
+    if (typeof window !== 'undefined') {
+      filePath = window.sessionStorage.getItem('edit_article_path') || ''
+    }
+    if (!filePath) {
+      alert('未找到文章文件路径，无法保存')
+      return
+    }
+    // 获取sha
+    let sha = ''
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('github_access_token') : null
+      if (!token) {
+        alert('未检测到GitHub登录令牌，请重新登录')
+        return
+      }
+      const fileRes = await fetch(`https://api.github.com/repos/LACS-Official/appwebsite-hugo/contents/${filePath}`, {
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: 'application/vnd.github+json',
+        },
+      })
+      if (!fileRes.ok) throw new Error('获取文章sha失败: ' + fileRes.status)
+      const fileData = await fileRes.json()
+      sha = fileData.sha
+      // base64编码内容
+      let contentBase64 = ''
+      if (typeof window !== 'undefined' && window.btoa) {
+        contentBase64 = window.btoa(unescape(encodeURIComponent(markdown)))
+      } else {
+        contentBase64 = Buffer.from(markdown, 'utf-8').toString('base64')
+      }
+      // 调用GitHub API保存
+      const res = await fetch(`https://api.github.com/repos/LACS-Official/appwebsite-hugo/contents/${filePath}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: 'application/vnd.github+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: `更新文章：${frontmatter.title}`,
+          content: contentBase64,
+          sha,
+        })
+      })
+      if (!res.ok) throw new Error('保存失败: ' + res.status)
+      alert('文章更新成功！')
+      router.push(`/dashboard/hugo/${params.id}`)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '保存失败')
+    }
   }
   
   // 处理预览
