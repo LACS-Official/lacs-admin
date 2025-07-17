@@ -254,8 +254,9 @@ export default function EditHugoArticle() {
       alert('未找到文章文件路径，无法保存')
       return
     }
-    // 获取sha
+    // 获取sha，区分新建和编辑
     let sha = ''
+    let isNew = false
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('github_access_token') : null
       if (!token) {
@@ -268,9 +269,14 @@ export default function EditHugoArticle() {
           Accept: 'application/vnd.github+json',
         },
       })
-      if (!fileRes.ok) throw new Error('获取文章sha失败: ' + fileRes.status)
-      const fileData = await fileRes.json()
-      sha = fileData.sha
+      if (fileRes.ok) {
+        const fileData = await fileRes.json()
+        sha = fileData.sha
+      } else if (fileRes.status === 404) {
+        isNew = true // 文件不存在，视为新建
+      } else {
+        throw new Error('获取文章sha失败: ' + fileRes.status)
+      }
       // base64编码内容
       let contentBase64 = ''
       if (typeof window !== 'undefined' && window.btoa) {
@@ -278,6 +284,12 @@ export default function EditHugoArticle() {
       } else {
         contentBase64 = Buffer.from(markdown, 'utf-8').toString('base64')
       }
+      // 组装body
+      const body: Record<string, unknown> = {
+        message: `更新文章：${frontmatter.title}`,
+        content: contentBase64,
+      }
+      if (!isNew) body.sha = sha
       // 调用GitHub API保存
       const res = await fetch(`https://api.github.com/repos/LACS-Official/appwebsite-hugo/contents/${filePath}`, {
         method: 'PUT',
@@ -286,13 +298,12 @@ export default function EditHugoArticle() {
           Accept: 'application/vnd.github+json',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          message: `更新文章：${frontmatter.title}`,
-          content: contentBase64,
-          sha,
-        })
+        body: JSON.stringify(body)
       })
-      if (!res.ok) throw new Error('保存失败: ' + res.status)
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error('保存失败: ' + res.status + ' ' + errorText);
+      }
       alert('文章更新成功！')
       router.push(`/dashboard/hugo/${params.id}`)
     } catch (e) {
