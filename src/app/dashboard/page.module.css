@@ -1,0 +1,473 @@
+.dashboard {
+  min-height: 100vh;
+  background: var(--background);
+  display: flex;
+  flex-direction: column;
+}
+
+/* 页面头部 */
+.pageHeader {
+  background: var(--background-card);
+  border-bottom: 1px solid var(--border);
+  padding: var(--spacing-lg) 0;
+}
+
+.headerContent {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+}
+
+.headerInfo h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0 0 var(--spacing-xs) 0;
+}
+
+.headerInfo p {
+  color: var(--foreground-secondary);
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing);
+}
+
+.searchBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchBox svg {
+  position: absolute;
+  left: var(--spacing-sm);
+  color: var(--foreground-muted);
+  z-index: 1;
+}
+
+.searchBox input {
+  padding: var(--spacing-sm) var(--spacing-sm) var(--spacing-sm) 2.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 0.9rem;
+  width: 300px;
+  transition: all 0.2s ease;
+}
+
+.searchBox input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.addButton {
+  white-space: nowrap;
+}
+
+/* 主要内容区域 */
+.main {
+  flex: 1;
+  display: flex;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-lg);
+}
+
+/* 侧边栏 */
+.sidebar {
+  width: 250px;
+  flex-shrink: 0;
+}
+
+.nav {
+  background: var(--background-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  position: sticky;
+  top: calc(140px + var(--spacing-lg));
+}
+
+.navSection h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--foreground-secondary);
+  margin-bottom: var(--spacing);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.navSection ul {
+  list-style: none;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing);
+  border-radius: var(--radius);
+  color: var(--foreground-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 2px;
+}
+
+.navItem:hover {
+  background: var(--background-secondary);
+  color: var(--foreground);
+}
+
+.navItem:first-child {
+  background: var(--primary);
+  color: white;
+}
+
+.navItem:first-child:hover {
+  background: var(--primary-dark);
+}
+
+/* 内容区域 */
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+
+
+/* 仓库网格 */
+.repoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.repoCard {
+  padding: var(--spacing-lg);
+  transition: all 0.3s ease;
+  border: 1px solid var(--border);
+  position: relative;
+}
+
+.repoCard:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+}
+
+.repoHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--spacing);
+}
+
+.repoTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex: 1;
+}
+
+.repoTitle h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.privateBadge {
+  background: var(--foreground-muted);
+  color: white;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+}
+
+.repoActions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.actionButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--background);
+  color: var(--foreground-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.actionButton:hover {
+  background: var(--background-secondary);
+  color: var(--foreground);
+  border-color: var(--primary);
+}
+
+.hugoButton {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.hugoButton:hover {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+.deleteButton {
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
+}
+
+.deleteButton:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.repoDescription {
+  color: var(--foreground-secondary);
+  line-height: 1.5;
+  margin-bottom: var(--spacing);
+}
+
+.repoMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing);
+}
+
+.language {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: 0.9rem;
+  color: var(--foreground-secondary);
+}
+
+.languageDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.languageDot.typescript {
+  background: #3178c6;
+}
+
+.languageDot.html {
+  background: #e34c26;
+}
+
+.languageDot.go {
+  background: #00add8;
+}
+
+.languageDot.javascript {
+  background: #f1e05a;
+}
+
+.stats {
+  display: flex;
+  gap: var(--spacing);
+  font-size: 0.9rem;
+  color: var(--foreground-secondary);
+}
+
+.stats span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.repoTopics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing);
+}
+
+.topic {
+  background: var(--background-secondary);
+  color: var(--primary);
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+}
+
+.repoFooter {
+  padding-top: var(--spacing);
+  border-top: 1px solid var(--border-light);
+}
+
+.lastUpdated {
+  font-size: 0.85rem;
+  color: var(--foreground-muted);
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .main {
+    padding: var(--spacing);
+  }
+  
+  .repoGrid {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .headerContent {
+    flex-direction: column;
+    gap: var(--spacing);
+    padding: 0 var(--spacing);
+  }
+
+  .headerActions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .searchBox input {
+    width: 200px;
+  }
+  
+  .main {
+    flex-direction: column;
+    padding: var(--spacing);
+  }
+  
+  .sidebar {
+    width: 100%;
+    order: 2;
+  }
+  
+  .nav {
+    position: static;
+  }
+  
+  .content {
+    order: 1;
+  }
+  
+  .repoGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 删除确认模态框样式 */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.deleteModal {
+  background: var(--background-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  width: 90%;
+  max-width: 400px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.deleteHeader {
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--border);
+}
+
+.deleteHeader h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.deleteContent {
+  padding: var(--spacing-lg);
+}
+
+.deleteContent p {
+  margin-bottom: var(--spacing-sm);
+  color: var(--foreground-secondary);
+  line-height: 1.5;
+}
+
+.deleteWarning {
+  color: #ef4444 !important;
+  font-weight: 500;
+}
+
+.deleteActions {
+  display: flex;
+  gap: var(--spacing);
+  justify-content: flex-end;
+  padding: var(--spacing-lg);
+  border-top: 1px solid var(--border);
+}
+
+.cancelButton {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--background);
+  color: var(--foreground-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancelButton:hover {
+  background: var(--background-secondary);
+  color: var(--foreground);
+  border-color: var(--foreground-muted);
+}
+
+.deleteConfirmButton {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border: none;
+  border-radius: var(--radius);
+  background: #ef4444;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.deleteConfirmButton:hover {
+  background: #dc2626;
+}

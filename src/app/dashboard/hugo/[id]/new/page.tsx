@@ -1,0 +1,390 @@
+'use client'
+
+import { useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import styles from './page.module.css'
+import Navigation from '@/components/Navigation'
+
+interface HugoFrontmatter {
+  title: string
+  date: string
+  draft: boolean
+  categories: string[]
+  tags: string[]
+  version?: string
+  size?: string
+  downloads?: {
+    official?: string
+    quark?: string
+    netdisk?: string
+    baidu?: string
+    thunder?: string
+  }
+  official_website?: string
+  platforms?: string[]
+  system_requirements?: {
+    [key: string]: string[]
+  }
+  changelog?: string[]
+  previous_versions?: Array<{
+    version: string
+    date: string
+    changes: string[]
+  }>
+  image?: string
+}
+
+export default function NewHugoArticle() {
+  const params = useParams()
+  const router = useRouter()
+  
+  const [frontmatter, setFrontmatter] = useState<HugoFrontmatter>({
+    title: '',
+    date: new Date().toISOString(),
+    draft: true,
+    categories: [],
+    tags: [],
+  })
+  
+  const [content, setContent] = useState('')
+  const [categoryInput, setCategoryInput] = useState('')
+  const [tagInput, setTagInput] = useState('')
+  const [platformInput, setPlatformInput] = useState('')
+  const [changelogInput, setChangelogInput] = useState('')
+  
+  // 处理基础字段更新
+  const updateFrontmatter = (field: keyof HugoFrontmatter, value: any) => {
+    setFrontmatter(prev => ({ ...prev, [field]: value }))
+  }
+  
+  // 处理数组字段添加
+  const addToArray = (field: 'categories' | 'tags' | 'platforms' | 'changelog', value: string, inputSetter: (value: string) => void) => {
+    if (value.trim()) {
+      const currentArray = frontmatter[field] as string[] || []
+      if (!currentArray.includes(value.trim())) {
+        updateFrontmatter(field, [...currentArray, value.trim()])
+      }
+      inputSetter('')
+    }
+  }
+  
+  // 处理数组字段删除
+  const removeFromArray = (field: 'categories' | 'tags' | 'platforms' | 'changelog', value: string) => {
+    const currentArray = frontmatter[field] as string[] || []
+    updateFrontmatter(field, currentArray.filter(item => item !== value))
+  }
+  
+  // 处理下载链接更新
+  const updateDownloads = (platform: string, url: string) => {
+    setFrontmatter(prev => ({
+      ...prev,
+      downloads: {
+        ...prev.downloads,
+        [platform]: url || undefined
+      }
+    }))
+  }
+  
+  // 处理系统要求更新
+  const updateSystemRequirements = (platform: string, requirements: string[]) => {
+    setFrontmatter(prev => ({
+      ...prev,
+      system_requirements: {
+        ...prev.system_requirements,
+        [platform]: requirements
+      }
+    }))
+  }
+  
+  // 生成Markdown内容
+  const generateMarkdown = () => {
+    const frontmatterObj: any = { ...frontmatter }
+    
+    // 清理空值
+    Object.keys(frontmatterObj).forEach(key => {
+      const value = frontmatterObj[key]
+      if (value === undefined || value === null || value === '' || 
+          (Array.isArray(value) && value.length === 0) ||
+          (typeof value === 'object' && Object.keys(value).length === 0)) {
+        delete frontmatterObj[key]
+      }
+    })
+    
+    // 清理downloads中的空值
+    if (frontmatterObj.downloads) {
+      Object.keys(frontmatterObj.downloads).forEach(key => {
+        if (!frontmatterObj.downloads[key]) {
+          delete frontmatterObj.downloads[key]
+        }
+      })
+      if (Object.keys(frontmatterObj.downloads).length === 0) {
+        delete frontmatterObj.downloads
+      }
+    }
+    
+    // 清理system_requirements中的空值
+    if (frontmatterObj.system_requirements) {
+      Object.keys(frontmatterObj.system_requirements).forEach(key => {
+        if (!frontmatterObj.system_requirements[key] || frontmatterObj.system_requirements[key].length === 0) {
+          delete frontmatterObj.system_requirements[key]
+        }
+      })
+      if (Object.keys(frontmatterObj.system_requirements).length === 0) {
+        delete frontmatterObj.system_requirements
+      }
+    }
+    
+    const yamlContent = Object.entries(frontmatterObj)
+      .map(([key, value]) => {
+        if (Array.isArray(value)) {
+          return `${key}: [${value.map(v => `"${v}"`).join(', ')}]`
+        } else if (typeof value === 'object') {
+          const objStr = Object.entries(value)
+            .map(([k, v]) => {
+              if (Array.isArray(v)) {
+                return `  ${k}:\n${(v as string[]).map(item => `    - "${item}"`).join('\n')}`
+              }
+              return `  ${k}: "${v}"`
+            })
+            .join('\n')
+          return `${key}:\n${objStr}`
+        } else if (typeof value === 'boolean') {
+          return `${key}: ${value}`
+        } else {
+          return `${key}: "${value}"`
+        }
+      })
+      .join('\n')
+    
+    return `---\n${yamlContent}\n---\n\n${content}`
+  }
+  
+  // 处理保存
+  const handleSave = () => {
+    if (!frontmatter.title.trim()) {
+      alert('请输入文章标题')
+      return
+    }
+    
+    const markdown = generateMarkdown()
+    console.log('Generated Markdown:', markdown)
+    
+    // 这里应该调用API保存文章
+    alert('文章保存成功！')
+    router.push(`/dashboard/hugo/${params.id}`)
+  }
+  
+  // 处理预览
+  const handlePreview = () => {
+    const markdown = generateMarkdown()
+    const newWindow = window.open('', '_blank')
+    if (newWindow) {
+      newWindow.document.write(`
+        <html>
+          <head><title>预览 - ${frontmatter.title}</title></head>
+          <body>
+            <pre style="white-space: pre-wrap; font-family: monospace; padding: 20px;">
+              ${markdown}
+            </pre>
+          </body>
+        </html>
+      `)
+    }
+  }
+
+  return (
+    <div className={styles.editor}>
+      {/* 导航栏 */}
+      <Navigation />
+
+      {/* 页面头部 */}
+      <div className={styles.pageHeader}>
+        <div className={styles.headerContent}>
+          <div className={styles.headerInfo}>
+            <h1>新增Hugo文章</h1>
+            <p>创建新的Markdown格式文章</p>
+          </div>
+
+          <div className={styles.headerActions}>
+            <button onClick={handlePreview} className={styles.previewButton}>
+              预览
+            </button>
+            <button onClick={handleSave} className={`btn btn-primary`}>
+              保存文章
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.editorContent}>
+        {/* 左侧：Frontmatter编辑 */}
+        <div className={styles.frontmatterPanel}>
+          <h3>文章信息</h3>
+          
+          {/* 基础信息 */}
+          <div className={styles.section}>
+            <h4>基础信息</h4>
+            
+            <div className={styles.formGroup}>
+              <label>标题 *</label>
+              <input
+                type="text"
+                value={frontmatter.title}
+                onChange={(e) => updateFrontmatter('title', e.target.value)}
+                placeholder="输入文章标题"
+              />
+            </div>
+            
+            <div className={styles.formGroup}>
+              <label>发布日期</label>
+              <input
+                type="datetime-local"
+                value={frontmatter.date.slice(0, 16)}
+                onChange={(e) => updateFrontmatter('date', e.target.value + ':00+08:00')}
+              />
+            </div>
+            
+            <div className={styles.formGroup}>
+              <label className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={frontmatter.draft}
+                  onChange={(e) => updateFrontmatter('draft', e.target.checked)}
+                />
+                <span className={styles.checkboxCustom}></span>
+                保存为草稿
+              </label>
+            </div>
+          </div>
+
+          {/* 分类和标签 */}
+          <div className={styles.section}>
+            <h4>分类和标签</h4>
+            
+            <div className={styles.formGroup}>
+              <label>分类</label>
+              <div className={styles.inputWithAdd}>
+                <input
+                  type="text"
+                  value={categoryInput}
+                  onChange={(e) => setCategoryInput(e.target.value)}
+                  placeholder="输入分类后按回车添加"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      addToArray('categories', categoryInput, setCategoryInput)
+                    }
+                  }}
+                />
+                <button 
+                  type="button"
+                  onClick={() => addToArray('categories', categoryInput, setCategoryInput)}
+                >
+                  添加
+                </button>
+              </div>
+              <div className={styles.tags}>
+                {frontmatter.categories.map((category) => (
+                  <span key={category} className={styles.tag}>
+                    {category}
+                    <button onClick={() => removeFromArray('categories', category)}>×</button>
+                  </span>
+                ))}
+              </div>
+            </div>
+            
+            <div className={styles.formGroup}>
+              <label>标签</label>
+              <div className={styles.inputWithAdd}>
+                <input
+                  type="text"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  placeholder="输入标签后按回车添加"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      addToArray('tags', tagInput, setTagInput)
+                    }
+                  }}
+                />
+                <button 
+                  type="button"
+                  onClick={() => addToArray('tags', tagInput, setTagInput)}
+                >
+                  添加
+                </button>
+              </div>
+              <div className={styles.tags}>
+                {frontmatter.tags.map((tag) => (
+                  <span key={tag} className={styles.tag}>
+                    {tag}
+                    <button onClick={() => removeFromArray('tags', tag)}>×</button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 软件信息（可选） */}
+          <div className={styles.section}>
+            <h4>软件信息（可选）</h4>
+            
+            <div className={styles.formRow}>
+              <div className={styles.formGroup}>
+                <label>版本</label>
+                <input
+                  type="text"
+                  value={frontmatter.version || ''}
+                  onChange={(e) => updateFrontmatter('version', e.target.value)}
+                  placeholder="如：1.0.0"
+                />
+              </div>
+              
+              <div className={styles.formGroup}>
+                <label>大小</label>
+                <input
+                  type="text"
+                  value={frontmatter.size || ''}
+                  onChange={(e) => updateFrontmatter('size', e.target.value)}
+                  placeholder="如：85MB"
+                />
+              </div>
+            </div>
+            
+            <div className={styles.formGroup}>
+              <label>官方网站</label>
+              <input
+                type="url"
+                value={frontmatter.official_website || ''}
+                onChange={(e) => updateFrontmatter('official_website', e.target.value)}
+                placeholder="https://example.com"
+              />
+            </div>
+            
+            <div className={styles.formGroup}>
+              <label>封面图片</label>
+              <input
+                type="text"
+                value={frontmatter.image || ''}
+                onChange={(e) => updateFrontmatter('image', e.target.value)}
+                placeholder="/images/example.jpg"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* 右侧：内容编辑 */}
+        <div className={styles.contentPanel}>
+          <h3>文章内容</h3>
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="在这里编写文章内容（支持Markdown格式）..."
+            className={styles.contentEditor}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
