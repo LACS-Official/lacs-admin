@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import styles from './page.module.css'
 import RepoModal from '@/components/RepoModal'
 import Navigation from '@/components/Navigation'
@@ -20,47 +20,49 @@ interface GitHubRepo {
 }
 
 // 模拟数据
-const mockRepos: GitHubRepo[] = [
-  {
-    id: '1',
-    name: 'appwebsite-hugo',
-    description: 'Hugo静态网站生成器项目，用于构建现代化的网站',
-    url: 'https://github.com/user/appwebsite-hugo',
-    language: 'HTML',
-    stars: 45,
-    forks: 12,
-    lastUpdated: '2024-01-15',
-    isPrivate: false,
-    topics: ['hugo', 'website', 'static-site']
-  },
-  {
-    id: '2',
-    name: 'lacs-admin',
-    description: 'LACS管理系统前端项目',
-    url: 'https://github.com/user/lacs-admin',
-    language: 'TypeScript',
-    stars: 23,
-    forks: 5,
-    lastUpdated: '2024-01-17',
-    isPrivate: true,
-    topics: ['admin', 'dashboard', 'nextjs']
-  },
-  {
-    id: '3',
-    name: 'api-server',
-    description: 'RESTful API服务器，提供后端数据接口',
-    url: 'https://github.com/user/api-server',
-    language: 'Go',
-    stars: 67,
-    forks: 18,
-    lastUpdated: '2024-01-16',
-    isPrivate: false,
-    topics: ['api', 'golang', 'server']
-  }
-]
+// const mockRepos: GitHubRepo[] = [
+//   {
+//     id: '1',
+//     name: 'appwebsite-hugo',
+//     description: 'Hugo静态网站生成器项目，用于构建现代化的网站',
+//     url: 'https://github.com/user/appwebsite-hugo',
+//     language: 'HTML',
+//     stars: 45,
+//     forks: 12,
+//     lastUpdated: '2024-01-15',
+//     isPrivate: false,
+//     topics: ['hugo', 'website', 'static-site']
+//   },
+//   {
+//     id: '2',
+//     name: 'lacs-admin',
+//     description: 'LACS管理系统前端项目',
+//     url: 'https://github.com/user/lacs-admin',
+//     language: 'TypeScript',
+//     stars: 23,
+//     forks: 5,
+//     lastUpdated: '2024-01-17',
+//     isPrivate: true,
+//     topics: ['admin', 'dashboard', 'nextjs']
+//   },
+//   {
+//     id: '3',
+//     name: 'api-server',
+//     description: 'RESTful API服务器，提供后端数据接口',
+//     url: 'https://github.com/user/api-server',
+//     language: 'Go',
+//     stars: 67,
+//     forks: 18,
+//     lastUpdated: '2024-01-16',
+//     isPrivate: false,
+//     topics: ['api', 'golang', 'server']
+//   }
+// ]
 
 export default function Dashboard() {
-  const [repos, setRepos] = useState<GitHubRepo[]>(mockRepos)
+  const [repos, setRepos] = useState<GitHubRepo[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [selectedRepo, setSelectedRepo] = useState<GitHubRepo | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -111,8 +113,59 @@ export default function Dashboard() {
     }
   }
 
+  // 获取真实GitHub仓库
+  useEffect(() => {
+    const fetchRepos = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('github_access_token') : null
+        if (!token) {
+          setError('未检测到GitHub登录令牌，请重新登录')
+          setLoading(false)
+          return
+        }
+        const res = await fetch('https://api.github.com/user/repos?per_page=100', {
+          headers: {
+            Authorization: `token ${token}`,
+            Accept: 'application/vnd.github+json',
+          },
+        })
+        if (!res.ok) {
+          throw new Error('GitHub API请求失败: ' + res.status)
+        }
+        const data = await res.json()
+        // 适配为GitHubRepo类型
+        const repoList: GitHubRepo[] = data.map((repo: any) => ({
+          id: String(repo.id),
+          name: repo.name,
+          description: repo.description || '',
+          url: repo.html_url,
+          language: repo.language || '未知',
+          stars: repo.stargazers_count,
+          forks: repo.forks_count,
+          lastUpdated: repo.updated_at ? repo.updated_at.slice(0, 10) : '',
+          isPrivate: repo.private,
+          topics: Array.isArray(repo.topics) ? repo.topics : [],
+        }))
+        setRepos(repoList)
+      } catch (e: any) {
+        setError(e.message || '获取仓库失败')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchRepos()
+  }, [])
+
   return (
     <div className={styles.dashboard}>
+      {loading && (
+        <div style={{textAlign: 'center', padding: '2rem'}}>正在加载GitHub仓库...</div>
+      )}
+      {error && (
+        <div style={{color: 'red', textAlign: 'center', padding: '2rem'}}>{error}</div>
+      )}
       {/* 导航栏 */}
       <Navigation />
 
