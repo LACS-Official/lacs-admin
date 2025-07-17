@@ -286,7 +286,7 @@ export default function HugoManagement() {
               <div className={styles.articleActions}>
                 <button 
                   className={styles.actionButton}
-                  onClick={() => handleEditArticle(article.id, (article as any).path)}
+                  onClick={() => handleEditArticle(article.id, (article as { path?: string }).path)}
                   title="编辑文章"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

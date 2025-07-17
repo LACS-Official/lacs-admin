@@ -129,12 +129,12 @@ export default function EditHugoArticle() {
           tags: (frontmatter.tags as string[]) || [],
           version: frontmatter.version as string,
           size: frontmatter.size as string,
-          downloads: frontmatter.downloads as any,
+          downloads: frontmatter.downloads as Record<string, string> | undefined,
           official_website: frontmatter.official_website as string,
-          platforms: frontmatter.platforms as string[],
-          system_requirements: frontmatter.system_requirements as any,
-          changelog: frontmatter.changelog as string[],
-          previous_versions: frontmatter.previous_versions as any,
+          platforms: frontmatter.platforms as string[] | undefined,
+          system_requirements: frontmatter.system_requirements as Record<string, string[]> | undefined,
+          changelog: frontmatter.changelog as string[] | undefined,
+          previous_versions: frontmatter.previous_versions as Array<{version: string; date: string; changes: string[]}> | undefined,
           image: frontmatter.image as string,
         })
         setContent(body)
