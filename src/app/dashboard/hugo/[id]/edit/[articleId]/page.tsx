@@ -211,8 +211,8 @@ export default function EditHugoArticle() {
       .map(([key, value]) => {
         if (Array.isArray(value)) {
           return `${key}: [${value.map(v => `"${v}"`).join(', ')}]`
-        } else if (typeof value === 'object') {
-          const objStr = Object.entries(value)
+        } else if (typeof value === 'object' && value !== null) {
+          const objStr = Object.entries(value as Record<string, unknown>)
             .map(([k, v]) => {
               if (Array.isArray(v)) {
                 return `  ${k}:\n${(v as string[]).map(item => `    - "${item}"`).join('\n')}`
