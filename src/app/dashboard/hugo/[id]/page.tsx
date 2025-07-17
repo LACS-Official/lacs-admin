@@ -68,11 +68,11 @@ export default function HugoManagement() {
         })
         if (!treeRes.ok) throw new Error('获取仓库文件树失败: ' + treeRes.status)
         const treeData = await treeRes.json()
-        const mdFiles = (treeData.tree || []).filter((item: any) =>
+        const mdFiles = (treeData.tree || []).filter((item: { path: string; sha: string; type: string }) =>
           typeof item.path === 'string' && item.path.startsWith('content/') && item.path.endsWith('.md') && item.type === 'blob'
         )
         // 并发获取每个md文件内容
-        const articlePromises = mdFiles.map(async (file: any) => {
+        const articlePromises = mdFiles.map(async (file: { path: string; sha: string; type: string }) => {
           const fileRes = await fetch(`https://api.github.com/repos/LACS-Official/appwebsite-hugo/contents/${file.path}`, {
             headers: {
               Authorization: `token ${token}`,
@@ -85,7 +85,7 @@ export default function HugoManagement() {
           const contentRaw = typeof fileData.content === 'string' ? atob(fileData.content.replace(/\n/g, '')) : ''
           // 解析frontmatter
           const match = contentRaw.match(/^---([\s\S]*?)---\s*([\s\S]*)$/)
-          let frontmatter: any = {}
+          const frontmatter: Record<string, unknown> = {}
           let body = contentRaw
           if (match) {
             // 简单YAML解析
@@ -98,19 +98,20 @@ export default function HugoManagement() {
                 let value = line.slice(idx + 1).trim()
                 if (value.startsWith('[') && value.endsWith(']')) {
                   // 数组
-                  value = value.slice(1, -1).split(',').map(v => v.trim().replace(/^"|"$/g, ''))
+                  frontmatter[key] = value.slice(1, -1).split(',').map(v => v.trim().replace(/^"|"$/g, ''))
                 } else if (value === 'true' || value === 'false') {
-                  value = value === 'true'
+                  frontmatter[key] = value === 'true'
                 } else if (/^".*"$/.test(value)) {
-                  value = value.slice(1, -1)
+                  frontmatter[key] = value.slice(1, -1)
+                } else {
+                  frontmatter[key] = value
                 }
-                frontmatter[key] = value
               }
             })
           }
           return {
             id: file.sha,
-            title: frontmatter.title || file.path.split('/').pop().replace(/\.md$/, ''),
+            title: frontmatter.title || (file.path.split('/').pop()?.replace(/\.md$/, '') ?? ''),
             date: frontmatter.date || '',
             draft: frontmatter.draft ?? false,
             categories: frontmatter.categories || [],
@@ -146,8 +147,8 @@ export default function HugoManagement() {
   // 过滤文章
   const filteredArticles = articles.filter(article => {
     const title = String(article.title || '')
-    const tags = Array.isArray(article.tags) ? article.tags : []
-    const categories = Array.isArray(article.categories) ? article.categories : []
+    const tags = Array.isArray(article.tags) ? article.tags : (article.tags ? [String(article.tags)] : [])
+    const categories = Array.isArray(article.categories) ? article.categories : (article.categories ? [String(article.categories)] : [])
     const matchesSearch = title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       tags.some(tag => String(tag).toLowerCase().includes(searchTerm.toLowerCase()))
     const matchesDraft = filterDraft === 'all' ||
