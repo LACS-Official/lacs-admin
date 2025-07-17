@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import styles from './page.module.css'
 import Navigation from '@/components/Navigation'
+import { githubApi, GitHubApiError, DEFAULT_HUGO_REPO, GitHubApiClient } from '@/utils/github-api'
 
 // Hugo文章数据类型
 interface HugoArticle {
@@ -37,17 +38,7 @@ interface HugoArticle {
   content: string
 }
 
-// 兼容utf-8的base64解码
-function base64ToUtf8(str: string): string {
-  if (typeof window !== 'undefined' && window.atob) {
-    const binary = window.atob(str)
-    const bytes = Uint8Array.from(binary, c => c.charCodeAt(0))
-    return new TextDecoder('utf-8').decode(bytes)
-  } else {
-    // Node.js 环境
-    return Buffer.from(str, 'base64').toString('utf-8')
-  }
-}
+
 
 export default function HugoManagement() {
   const params = useParams()
@@ -71,81 +62,91 @@ export default function HugoManagement() {
           setLoading(false)
           return
         }
+
+        // 首先检查仓库是否存在
+        const repoExists = await githubApi.checkRepository(DEFAULT_HUGO_REPO.owner, DEFAULT_HUGO_REPO.name)
+        if (!repoExists) {
+          setError(`仓库 ${DEFAULT_HUGO_REPO.owner}/${DEFAULT_HUGO_REPO.name} 不存在或您没有访问权限`)
+          setLoading(false)
+          return
+        }
+
         // 递归获取content目录下所有文件
-        const treeRes = await fetch('https://api.github.com/repos/LACS-Official/appwebsite-hugo/git/trees/main?recursive=1', {
-          headers: {
-            Authorization: `token ${token}`,
-            Accept: 'application/vnd.github+json',
-          },
-        })
-        if (!treeRes.ok) throw new Error('获取仓库文件树失败: ' + treeRes.status)
-        const treeData = await treeRes.json()
+        const treeData = await githubApi.getRepositoryTree(DEFAULT_HUGO_REPO.owner, DEFAULT_HUGO_REPO.name, DEFAULT_HUGO_REPO.branch)
         const mdFiles = (treeData.tree || []).filter((item: { path: string; sha: string; type: string }) =>
           typeof item.path === 'string' && item.path.startsWith('content/') && item.path.endsWith('.md') && item.type === 'blob'
         )
+
         // 并发获取每个md文件内容
         const articlePromises = mdFiles.map(async (file: { path: string; sha: string; type: string }) => {
-          const fileRes = await fetch(`https://api.github.com/repos/LACS-Official/appwebsite-hugo/contents/${file.path}`, {
-            headers: {
-              Authorization: `token ${token}`,
-              Accept: 'application/vnd.github+json',
-            },
-          })
-          if (!fileRes.ok) return null
-          const fileData = await fileRes.json()
-          // 解析base64内容
-          const contentRaw = typeof fileData.content === 'string' ? base64ToUtf8(fileData.content.replace(/\n/g, '')) : ''
-          // 解析frontmatter
-          const match = contentRaw.match(/^---([\s\S]*?)---\s*([\s\S]*)$/)
-          const frontmatter: Record<string, unknown> = {}
-          let body = contentRaw
-          if (match) {
-            // 简单YAML解析
-            const yaml = match[1]
-            body = match[2]
-            yaml.split(/\r?\n/).forEach(line => {
-              const idx = line.indexOf(':')
-              if (idx > -1) {
-                const key = line.slice(0, idx).trim()
-                const value = line.slice(idx + 1).trim()
-                if (value.startsWith('[') && value.endsWith(']')) {
-                  // 数组
-                  frontmatter[key] = value.slice(1, -1).split(',').map(v => v.trim().replace(/^\"|\"$/g, ''))
-                } else if (value === 'true' || value === 'false') {
-                  frontmatter[key] = value === 'true'
-                } else if (/^\".*\"$/.test(value)) {
-                  frontmatter[key] = value.slice(1, -1)
-                } else {
-                  frontmatter[key] = value
+          try {
+            const fileData = await githubApi.getFileContent(DEFAULT_HUGO_REPO.owner, DEFAULT_HUGO_REPO.name, file.path)
+            // 解析base64内容
+            const contentRaw = typeof fileData.content === 'string' ?
+              GitHubApiClient.base64ToUtf8(fileData.content.replace(/\n/g, '')) : ''
+
+            // 解析frontmatter
+            const match = contentRaw.match(/^---([\s\S]*?)---\s*([\s\S]*)$/)
+            const frontmatter: Record<string, unknown> = {}
+            let body = contentRaw
+            if (match) {
+              // 简单YAML解析
+              const yaml = match[1]
+              body = match[2]
+              yaml.split(/\r?\n/).forEach(line => {
+                const idx = line.indexOf(':')
+                if (idx > -1) {
+                  const key = line.slice(0, idx).trim()
+                  const value = line.slice(idx + 1).trim()
+                  if (value.startsWith('[') && value.endsWith(']')) {
+                    // 数组
+                    frontmatter[key] = value.slice(1, -1).split(',').map(v => v.trim().replace(/^\"|\"$/g, ''))
+                  } else if (value === 'true' || value === 'false') {
+                    frontmatter[key] = value === 'true'
+                  } else if (/^\".*\"$/.test(value)) {
+                    frontmatter[key] = value.slice(1, -1)
+                  } else {
+                    frontmatter[key] = value
+                  }
                 }
-              }
-            })
+              })
+            }
+            return {
+              id: file.sha,
+              title: frontmatter.title || (file.path.split('/').pop()?.replace(/\.md$/, '') ?? ''),
+              date: frontmatter.date || '',
+              draft: frontmatter.draft ?? false,
+              categories: frontmatter.categories || [],
+              tags: frontmatter.tags || [],
+              version: frontmatter.version,
+              size: frontmatter.size,
+              downloads: frontmatter.downloads,
+              official_website: frontmatter.official_website,
+              platforms: frontmatter.platforms,
+              system_requirements: frontmatter.system_requirements,
+              changelog: frontmatter.changelog,
+              previous_versions: frontmatter.previous_versions,
+              image: frontmatter.image,
+              content: body,
+              path: file.path,
+              sha: file.sha,
+            } as HugoArticle & { path: string; sha: string }
+          } catch (fileError) {
+            console.warn(`无法获取文件 ${file.path}:`, fileError)
+            return null
           }
-          return {
-            id: file.sha,
-            title: frontmatter.title || (file.path.split('/').pop()?.replace(/\.md$/, '') ?? ''),
-            date: frontmatter.date || '',
-            draft: frontmatter.draft ?? false,
-            categories: frontmatter.categories || [],
-            tags: frontmatter.tags || [],
-            version: frontmatter.version,
-            size: frontmatter.size,
-            downloads: frontmatter.downloads,
-            official_website: frontmatter.official_website,
-            platforms: frontmatter.platforms,
-            system_requirements: frontmatter.system_requirements,
-            changelog: frontmatter.changelog,
-            previous_versions: frontmatter.previous_versions,
-            image: frontmatter.image,
-            content: body,
-            path: file.path,
-            sha: file.sha,
-          } as HugoArticle & { path: string; sha: string }
         })
         const articles = (await Promise.all(articlePromises)).filter(Boolean) as (HugoArticle & { path: string; sha: string })[]
         setArticles(articles)
       } catch (e) {
-        setError(e instanceof Error ? e.message : '获取文章失败')
+        const error = e as GitHubApiError
+        if (error.isNotFound) {
+          setError('仓库或文件不存在，请检查仓库配置')
+        } else if (error.isUnauthorized) {
+          setError('GitHub 访问令牌无效，请重新登录')
+        } else {
+          setError(error.message || '获取文章失败')
+        }
       } finally {
         setLoading(false)
       }
@@ -185,7 +186,7 @@ export default function HugoManagement() {
   }
 
   // 处理删除文章
-  const handleDeleteArticle = (articleId: string) => {
+  const handleDeleteArticle = (_articleId: string) => {
     alert('请在后续版本中实现通过GitHub API删除md文件')
   }
 

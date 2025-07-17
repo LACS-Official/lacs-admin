@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import styles from '../../new/page.module.css'
 import Navigation from '@/components/Navigation'
+import { githubApi, GitHubApiError, DEFAULT_HUGO_REPO, GitHubApiClient } from '@/utils/github-api'
 
 interface HugoFrontmatter {
   title: string
@@ -34,17 +35,7 @@ interface HugoFrontmatter {
   image?: string
 }
 
-// 兼容utf-8的base64解码
-function base64ToUtf8(str: string): string {
-  if (typeof window !== 'undefined' && window.atob) {
-    const binary = window.atob(str)
-    const bytes = Uint8Array.from(binary, c => c.charCodeAt(0))
-    return new TextDecoder('utf-8').decode(bytes)
-  } else {
-    // Node.js 环境
-    return Buffer.from(str, 'base64').toString('utf-8')
-  }
-}
+
 
 function isPlainObject(val: unknown): val is object {
   return typeof val === 'object' && val !== null && !Array.isArray(val);
@@ -89,15 +80,10 @@ export default function EditHugoArticle() {
           setLoading(false)
           return
         }
-        const fileRes = await fetch(`https://api.github.com/repos/LACS-Official/appwebsite-hugo/contents/${filePath}`, {
-          headers: {
-            Authorization: `token ${token}`,
-            Accept: 'application/vnd.github+json',
-          },
-        })
-        if (!fileRes.ok) throw new Error('获取文章内容失败: ' + fileRes.status)
-        const fileData = await fileRes.json()
-        const contentRaw = typeof fileData.content === 'string' ? base64ToUtf8(fileData.content.replace(/\n/g, '')) : ''
+
+        const fileData = await githubApi.getFileContent(DEFAULT_HUGO_REPO.owner, DEFAULT_HUGO_REPO.name, filePath)
+        const contentRaw = typeof fileData.content === 'string' ?
+          GitHubApiClient.base64ToUtf8(fileData.content.replace(/\n/g, '')) : ''
         // 解析frontmatter
         const match = contentRaw.match(/^---([\s\S]*?)---\s*([\s\S]*)$/)
         const frontmatter: Record<string, unknown> = {}
@@ -140,7 +126,14 @@ export default function EditHugoArticle() {
         })
         setContent(body)
       } catch (e) {
-        alert(e instanceof Error ? e.message : '加载文章失败')
+        const error = e as GitHubApiError
+        if (error.isNotFound) {
+          alert('文章文件不存在，可能已被删除')
+        } else if (error.isUnauthorized) {
+          alert('GitHub 访问令牌无效，请重新登录')
+        } else {
+          alert(error.message || '加载文章失败')
+        }
       } finally {
         setLoading(false)
       }
@@ -263,50 +256,41 @@ export default function EditHugoArticle() {
         alert('未检测到GitHub登录令牌，请重新登录')
         return
       }
-      const fileRes = await fetch(`https://api.github.com/repos/LACS-Official/appwebsite-hugo/contents/${filePath}`, {
-        headers: {
-          Authorization: `token ${token}`,
-          Accept: 'application/vnd.github+json',
-        },
-      })
-      if (fileRes.ok) {
-        const fileData = await fileRes.json()
+
+      // 尝试获取现有文件的 SHA
+      try {
+        const fileData = await githubApi.getFileContent(DEFAULT_HUGO_REPO.owner, DEFAULT_HUGO_REPO.name, filePath)
         sha = fileData.sha
-      } else if (fileRes.status === 404) {
-        isNew = true
-      } else {
-        throw new Error('获取文章sha失败: ' + fileRes.status)
+      } catch (error) {
+        const apiError = error as GitHubApiError
+        if (apiError.isNotFound) {
+          isNew = true
+        } else {
+          throw error
+        }
       }
-      let contentBase64 = ''
-      if (typeof window !== 'undefined' && window.btoa) {
-        contentBase64 = window.btoa(unescape(encodeURIComponent(markdown)))
-      } else {
-        contentBase64 = Buffer.from(markdown, 'utf-8').toString('base64')
-      }
-      const body: Record<string, unknown> = {
-        message: `更新文章：${frontmatter.title}`,
-        content: contentBase64,
-      }
-      if (!isNew) body.sha = sha
-      console.log('handleSave sha:', sha)
-      console.log('handleSave body:', body)
-      const res = await fetch(`https://api.github.com/repos/LACS-Official/appwebsite-hugo/contents/${filePath}`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `token ${token}`,
-          Accept: 'application/vnd.github+json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body)
-      })
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error('保存失败: ' + res.status + ' ' + errorText);
-      }
+
+      // 更新文件
+      await githubApi.updateFile(
+        DEFAULT_HUGO_REPO.owner,
+        DEFAULT_HUGO_REPO.name,
+        filePath,
+        markdown,
+        `更新文章：${frontmatter.title}`,
+        isNew ? undefined : sha
+      )
+
       alert('文章更新成功！')
       router.push(`/dashboard/hugo/${params.id}`)
     } catch (e) {
-      alert(e instanceof Error ? e.message : '保存失败')
+      const error = e as GitHubApiError
+      if (error.isNotFound) {
+        alert('文件不存在，无法保存')
+      } else if (error.isUnauthorized) {
+        alert('GitHub 访问令牌无效，请重新登录')
+      } else {
+        alert(error.message || '保存失败')
+      }
     }
   }
   
