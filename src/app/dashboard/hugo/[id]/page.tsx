@@ -37,6 +37,18 @@ interface HugoArticle {
   content: string
 }
 
+// 兼容utf-8的base64解码
+function base64ToUtf8(str: string): string {
+  if (typeof window !== 'undefined' && window.atob) {
+    const binary = window.atob(str)
+    const bytes = Uint8Array.from(binary, c => c.charCodeAt(0))
+    return new TextDecoder('utf-8').decode(bytes)
+  } else {
+    // Node.js 环境
+    return Buffer.from(str, 'base64').toString('utf-8')
+  }
+}
+
 export default function HugoManagement() {
   const params = useParams()
   const router = useRouter()
@@ -82,7 +94,7 @@ export default function HugoManagement() {
           if (!fileRes.ok) return null
           const fileData = await fileRes.json()
           // 解析base64内容
-          const contentRaw = typeof fileData.content === 'string' ? atob(fileData.content.replace(/\n/g, '')) : ''
+          const contentRaw = typeof fileData.content === 'string' ? base64ToUtf8(fileData.content.replace(/\n/g, '')) : ''
           // 解析frontmatter
           const match = contentRaw.match(/^---([\s\S]*?)---\s*([\s\S]*)$/)
           const frontmatter: Record<string, unknown> = {}
