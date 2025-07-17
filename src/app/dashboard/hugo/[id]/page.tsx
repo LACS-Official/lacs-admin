@@ -95,13 +95,13 @@ export default function HugoManagement() {
               const idx = line.indexOf(':')
               if (idx > -1) {
                 const key = line.slice(0, idx).trim()
-                let value = line.slice(idx + 1).trim()
+                const value = line.slice(idx + 1).trim()
                 if (value.startsWith('[') && value.endsWith(']')) {
                   // 数组
-                  frontmatter[key] = value.slice(1, -1).split(',').map(v => v.trim().replace(/^"|"$/g, ''))
+                  frontmatter[key] = value.slice(1, -1).split(',').map(v => v.trim().replace(/^\"|\"$/g, ''))
                 } else if (value === 'true' || value === 'false') {
                   frontmatter[key] = value === 'true'
-                } else if (/^".*"$/.test(value)) {
+                } else if (/^\".*\"$/.test(value)) {
                   frontmatter[key] = value.slice(1, -1)
                 } else {
                   frontmatter[key] = value
