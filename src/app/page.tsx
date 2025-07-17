@@ -12,13 +12,6 @@ export default function Home() {
 
   return (
     <div className={styles.container}>
-      {/* 背景装饰 */}
-      <div className={styles.backgroundDecoration}>
-        <div className={styles.circle1}></div>
-        <div className={styles.circle2}></div>
-        <div className={styles.circle3}></div>
-      </div>
-
       {/* 主要内容 */}
       <main className={styles.main}>
         <div className={`${styles.loginCard} card fade-in`}>

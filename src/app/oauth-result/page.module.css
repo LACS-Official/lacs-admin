@@ -10,60 +10,6 @@
   overflow: hidden;
 }
 
-/* 背景装饰 */
-.backgroundDecoration {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.circle1,
-.circle2,
-.circle3 {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  animation: float 6s ease-in-out infinite;
-}
-
-.circle1 {
-  width: 250px;
-  height: 250px;
-  top: 15%;
-  left: 15%;
-  animation-delay: 0s;
-}
-
-.circle2 {
-  width: 180px;
-  height: 180px;
-  top: 65%;
-  right: 20%;
-  animation-delay: 2s;
-}
-
-.circle3 {
-  width: 120px;
-  height: 120px;
-  bottom: 25%;
-  left: 65%;
-  animation-delay: 4s;
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-15px) rotate(180deg);
-  }
-}
-
 /* 主要内容区域 */
 .main {
   position: relative;
@@ -384,12 +330,6 @@
 
   .userStats {
     gap: var(--spacing-sm);
-  }
-
-  .circle1,
-  .circle2,
-  .circle3 {
-    display: none;
   }
 
   .securityNotice {

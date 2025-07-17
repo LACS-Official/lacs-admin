@@ -57,10 +57,6 @@ export default function OAuthResult() {
   if (loading) {
     return (
       <div className={styles.container}>
-        <div className={styles.backgroundDecoration}>
-          <div className={styles.circle1}></div>
-          <div className={styles.circle2}></div>
-        </div>
         <div className={`${styles.loadingCard} card fade-in`}>
           <div className={styles.loadingSpinner}>
             <div className="loading"></div>
@@ -75,10 +71,6 @@ export default function OAuthResult() {
   if (error) {
     return (
       <div className={styles.container}>
-        <div className={styles.backgroundDecoration}>
-          <div className={styles.circle1}></div>
-          <div className={styles.circle2}></div>
-        </div>
         <div className={`${styles.errorCard} card fade-in`}>
           <div className={styles.errorIcon}>
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -102,10 +94,6 @@ export default function OAuthResult() {
   if (!user) {
     return (
       <div className={styles.container}>
-        <div className={styles.backgroundDecoration}>
-          <div className={styles.circle1}></div>
-          <div className={styles.circle2}></div>
-        </div>
         <div className={`${styles.errorCard} card fade-in`}>
           <h2 className={styles.errorTitle}>未找到用户信息</h2>
           <p className={styles.errorMessage}>无法获取用户数据，请重新登录</p>
@@ -121,12 +109,6 @@ export default function OAuthResult() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.backgroundDecoration}>
-        <div className={styles.circle1}></div>
-        <div className={styles.circle2}></div>
-        <div className={styles.circle3}></div>
-      </div>
-
       <main className={styles.main}>
         <div className={`${styles.successCard} card slide-up`}>
           {/* 成功图标 */}
