@@ -136,21 +136,24 @@ export default function Dashboard() {
         }
         const data = await res.json()
         // 适配为GitHubRepo类型
-        const repoList: GitHubRepo[] = data.map((repo: any) => ({
-          id: String(repo.id),
-          name: repo.name,
-          description: repo.description || '',
-          url: repo.html_url,
-          language: repo.language || '未知',
-          stars: repo.stargazers_count,
-          forks: repo.forks_count,
-          lastUpdated: repo.updated_at ? repo.updated_at.slice(0, 10) : '',
-          isPrivate: repo.private,
-          topics: Array.isArray(repo.topics) ? repo.topics : [],
-        }))
+        const repoList: GitHubRepo[] = data.map((repo: unknown) => {
+          const r = repo as Record<string, unknown>;
+          return {
+            id: String(r.id),
+            name: String(r.name),
+            description: typeof r.description === 'string' ? r.description : '',
+            url: String(r.html_url),
+            language: typeof r.language === 'string' ? r.language : '未知',
+            stars: typeof r.stargazers_count === 'number' ? r.stargazers_count : 0,
+            forks: typeof r.forks_count === 'number' ? r.forks_count : 0,
+            lastUpdated: typeof r.updated_at === 'string' ? r.updated_at.slice(0, 10) : '',
+            isPrivate: !!r.private,
+            topics: Array.isArray(r.topics) ? r.topics as string[] : [],
+          }
+        })
         setRepos(repoList)
-      } catch (e: any) {
-        setError(e.message || '获取仓库失败')
+      } catch (e) {
+        setError(e instanceof Error ? e.message : '获取仓库失败')
       } finally {
         setLoading(false)
       }
