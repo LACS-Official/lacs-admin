@@ -82,6 +82,7 @@ export default function EditHugoArticle() {
         let filePath = ''
         if (typeof window !== 'undefined') {
           filePath = window.sessionStorage.getItem('edit_article_path') || ''
+          console.log('useEffect filePath:', filePath)
         }
         if (!filePath) {
           alert('未找到文章文件路径，无法加载')
@@ -245,16 +246,15 @@ export default function EditHugoArticle() {
       return
     }
     const markdown = generateMarkdown()
-    // 获取path
     let filePath = ''
     if (typeof window !== 'undefined') {
       filePath = window.sessionStorage.getItem('edit_article_path') || ''
+      console.log('handleSave filePath:', filePath)
     }
     if (!filePath) {
       alert('未找到文章文件路径，无法保存')
       return
     }
-    // 获取sha，区分新建和编辑
     let sha = ''
     let isNew = false
     try {
@@ -273,24 +273,23 @@ export default function EditHugoArticle() {
         const fileData = await fileRes.json()
         sha = fileData.sha
       } else if (fileRes.status === 404) {
-        isNew = true // 文件不存在，视为新建
+        isNew = true
       } else {
         throw new Error('获取文章sha失败: ' + fileRes.status)
       }
-      // base64编码内容
       let contentBase64 = ''
       if (typeof window !== 'undefined' && window.btoa) {
         contentBase64 = window.btoa(unescape(encodeURIComponent(markdown)))
       } else {
         contentBase64 = Buffer.from(markdown, 'utf-8').toString('base64')
       }
-      // 组装body
       const body: Record<string, unknown> = {
         message: `更新文章：${frontmatter.title}`,
         content: contentBase64,
       }
       if (!isNew) body.sha = sha
-      // 调用GitHub API保存
+      console.log('handleSave sha:', sha)
+      console.log('handleSave body:', body)
       const res = await fetch(`https://api.github.com/repos/LACS-Official/appwebsite-hugo/contents/${filePath}`, {
         method: 'PUT',
         headers: {
