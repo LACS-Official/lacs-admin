@@ -124,7 +124,7 @@ export default function NewHugoArticle() {
       .map(([key, value]) => {
         if (Array.isArray(value)) {
           return `${key}: [${value.map(v => `"${v}"`).join(', ')}]`
-        } else if (typeof value === 'object') {
+        } else if (typeof value === 'object' && value !== null) {
           const objStr = Object.entries(value)
             .map(([k, v]) => {
               if (Array.isArray(v)) {
