@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import styles from './page.module.css'
 import Navigation from '@/components/Navigation'
+import { githubApi, GitHubApiError, getUserHugoRepo, generateHugoMarkdown, HugoArticleData } from '@/utils/github-api'
 
 interface HugoFrontmatter {
   title: string
@@ -145,19 +146,84 @@ export default function NewHugoArticle() {
     return `---\n${yamlContent}\n---\n\n${content}`
   }
   
+  // 生成文件名 slug
+  const generateSlug = (title: string): string => {
+    return title
+      .toLowerCase()
+      .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .substring(0, 50)
+  }
+
   // 处理保存
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!frontmatter.title.trim()) {
       alert('请输入文章标题')
       return
     }
-    
-    const markdown = generateMarkdown()
-    console.log('Generated Markdown:', markdown)
-    
-    // 这里应该调用API保存文章
-    alert('文章保存成功！')
-    router.push(`/dashboard/hugo/${params.id}`)
+
+    if (!content.trim()) {
+      alert('请输入文章内容')
+      return
+    }
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('github_access_token') : null
+      if (!token) {
+        alert('未检测到GitHub登录令牌，请重新登录')
+        return
+      }
+
+      // 获取用户仓库配置
+      const repoConfig = getUserHugoRepo()
+
+      // 准备文章数据
+      const articleData: HugoArticleData = {
+        title: frontmatter.title,
+        date: frontmatter.date || new Date().toISOString().split('T')[0],
+        draft: frontmatter.draft,
+        categories: frontmatter.categories,
+        tags: frontmatter.tags,
+        version: frontmatter.version,
+        size: frontmatter.size,
+        downloads: frontmatter.downloads,
+        official_website: frontmatter.official_website,
+        platforms: frontmatter.platforms,
+        system_requirements: frontmatter.system_requirements,
+        changelog: frontmatter.changelog,
+        previous_versions: frontmatter.previous_versions,
+        image: frontmatter.image,
+        content: content
+      }
+
+      // 生成 Markdown 内容
+      const markdownContent = generateHugoMarkdown(articleData)
+
+      // 生成文件路径
+      const slug = generateSlug(frontmatter.title)
+      const filePath = `content/software/${slug}.md`
+
+      // 提交到 GitHub
+      await githubApi.updateFile(
+        repoConfig.owner,
+        repoConfig.name,
+        filePath,
+        markdownContent,
+        `Create new article: ${frontmatter.title}`
+      )
+
+      alert('文章发布成功！')
+      router.push(`/dashboard/hugo/${params.id}`)
+    } catch (error) {
+      const apiError = error as GitHubApiError
+      if (apiError.isNotFound) {
+        alert('仓库不存在或您没有访问权限')
+      } else if (apiError.isUnauthorized) {
+        alert('GitHub 访问令牌无效，请重新登录')
+      } else {
+        alert(apiError.message || '发布失败，请重试')
+      }
+    }
   }
   
   // 处理预览

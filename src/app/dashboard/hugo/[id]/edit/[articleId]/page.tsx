@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import styles from '../../new/page.module.css'
 import Navigation from '@/components/Navigation'
-import { githubApi, GitHubApiError, DEFAULT_HUGO_REPO, GitHubApiClient } from '@/utils/github-api'
+import { githubApi, GitHubApiError, getUserHugoRepo, generateHugoMarkdown, HugoArticleData, GitHubApiClient } from '@/utils/github-api'
 
 interface HugoFrontmatter {
   title: string
@@ -81,7 +81,8 @@ export default function EditHugoArticle() {
           return
         }
 
-        const fileData = await githubApi.getFileContent(DEFAULT_HUGO_REPO.owner, DEFAULT_HUGO_REPO.name, filePath)
+        const repoConfig = getUserHugoRepo()
+        const fileData = await githubApi.getFileContent(repoConfig.owner, repoConfig.name, filePath)
         const contentRaw = typeof fileData.content === 'string' ?
           GitHubApiClient.base64ToUtf8(fileData.content.replace(/\n/g, '')) : ''
         // 解析frontmatter
@@ -238,7 +239,6 @@ export default function EditHugoArticle() {
       alert('请输入文章标题')
       return
     }
-    const markdown = generateMarkdown()
     let filePath = ''
     if (typeof window !== 'undefined') {
       filePath = window.sessionStorage.getItem('edit_article_path') || ''
@@ -257,9 +257,34 @@ export default function EditHugoArticle() {
         return
       }
 
+      // 获取用户仓库配置
+      const repoConfig = getUserHugoRepo()
+
+      // 准备文章数据
+      const articleData: HugoArticleData = {
+        title: frontmatter.title,
+        date: frontmatter.date,
+        draft: frontmatter.draft,
+        categories: frontmatter.categories,
+        tags: frontmatter.tags,
+        version: frontmatter.version,
+        size: frontmatter.size,
+        downloads: frontmatter.downloads,
+        official_website: frontmatter.official_website,
+        platforms: frontmatter.platforms,
+        system_requirements: frontmatter.system_requirements,
+        changelog: frontmatter.changelog,
+        previous_versions: frontmatter.previous_versions,
+        image: frontmatter.image,
+        content: content
+      }
+
+      // 生成 Markdown 内容
+      const markdownContent = generateHugoMarkdown(articleData)
+
       // 尝试获取现有文件的 SHA
       try {
-        const fileData = await githubApi.getFileContent(DEFAULT_HUGO_REPO.owner, DEFAULT_HUGO_REPO.name, filePath)
+        const fileData = await githubApi.getFileContent(repoConfig.owner, repoConfig.name, filePath)
         sha = fileData.sha
       } catch (error) {
         const apiError = error as GitHubApiError
@@ -272,10 +297,10 @@ export default function EditHugoArticle() {
 
       // 更新文件
       await githubApi.updateFile(
-        DEFAULT_HUGO_REPO.owner,
-        DEFAULT_HUGO_REPO.name,
+        repoConfig.owner,
+        repoConfig.name,
         filePath,
-        markdown,
+        markdownContent,
         `更新文章：${frontmatter.title}`,
         isNew ? undefined : sha
       )

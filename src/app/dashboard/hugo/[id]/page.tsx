@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import styles from './page.module.css'
 import Navigation from '@/components/Navigation'
-import { githubApi, GitHubApiError, DEFAULT_HUGO_REPO, GitHubApiClient } from '@/utils/github-api'
+import { githubApi, GitHubApiError, getUserHugoRepo, GitHubApiClient } from '@/utils/github-api'
 
 // Hugo文章数据类型
 interface HugoArticle {
@@ -63,16 +63,19 @@ export default function HugoManagement() {
           return
         }
 
+        // 获取用户仓库配置
+        const repoConfig = getUserHugoRepo()
+
         // 首先检查仓库是否存在
-        const repoExists = await githubApi.checkRepository(DEFAULT_HUGO_REPO.owner, DEFAULT_HUGO_REPO.name)
+        const repoExists = await githubApi.checkRepository(repoConfig.owner, repoConfig.name)
         if (!repoExists) {
-          setError(`仓库 ${DEFAULT_HUGO_REPO.owner}/${DEFAULT_HUGO_REPO.name} 不存在或您没有访问权限`)
+          setError(`仓库 ${repoConfig.owner}/${repoConfig.name} 不存在或您没有访问权限`)
           setLoading(false)
           return
         }
 
         // 递归获取content目录下所有文件
-        const treeData = await githubApi.getRepositoryTree(DEFAULT_HUGO_REPO.owner, DEFAULT_HUGO_REPO.name, DEFAULT_HUGO_REPO.branch)
+        const treeData = await githubApi.getRepositoryTree(repoConfig.owner, repoConfig.name, repoConfig.branch)
         const mdFiles = (treeData.tree || []).filter((item: { path: string; sha: string; type: string }) =>
           typeof item.path === 'string' && item.path.startsWith('content/') && item.path.endsWith('.md') && item.type === 'blob'
         )
@@ -80,7 +83,7 @@ export default function HugoManagement() {
         // 并发获取每个md文件内容
         const articlePromises = mdFiles.map(async (file: { path: string; sha: string; type: string }) => {
           try {
-            const fileData = await githubApi.getFileContent(DEFAULT_HUGO_REPO.owner, DEFAULT_HUGO_REPO.name, file.path)
+            const fileData = await githubApi.getFileContent(repoConfig.owner, repoConfig.name, file.path)
             // 解析base64内容
             const contentRaw = typeof fileData.content === 'string' ?
               GitHubApiClient.base64ToUtf8(fileData.content.replace(/\n/g, '')) : ''
