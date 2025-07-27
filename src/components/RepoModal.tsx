@@ -15,7 +15,6 @@ import {
   message
 } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
-import styles from './RepoModal.module.css'
 
 const { TextArea } = Input
 const { Option } = Select
@@ -62,7 +61,13 @@ export default function RepoModal({ isOpen, onClose, onSave, repo, mode }: RepoM
     }
   }, [repo, mode, isOpen, form])
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: {
+    name: string;
+    description?: string;
+    url: string;
+    language: string;
+    isPrivate: boolean;
+  }) => {
     try {
       const repoData: Partial<GitHubRepo> = {
         ...values,
@@ -76,7 +81,7 @@ export default function RepoModal({ isOpen, onClose, onSave, repo, mode }: RepoM
       onSave(repoData)
       onClose()
       message.success(mode === 'add' ? '仓库添加成功' : '仓库更新成功')
-    } catch (error) {
+    } catch {
       message.error('操作失败，请重试')
     }
   }

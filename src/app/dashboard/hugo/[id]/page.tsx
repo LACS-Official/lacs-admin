@@ -189,7 +189,7 @@ export default function HugoManagement() {
   }
 
   // 处理删除文章
-  const handleDeleteArticle = (_articleId: string) => {
+  const handleDeleteArticle = () => {
     alert('请在后续版本中实现通过GitHub API删除md文件')
   }
 
@@ -321,7 +321,7 @@ export default function HugoManagement() {
                 
                 <button 
                   className={`${styles.actionButton} ${styles.deleteButton}`}
-                  onClick={() => handleDeleteArticle(article.id)}
+                  onClick={() => handleDeleteArticle()}
                   title="删除文章"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

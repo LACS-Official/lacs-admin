@@ -11,7 +11,6 @@ import {
   SettingOutlined
 } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
-import styles from './Navigation.module.css'
 
 const { Header } = Layout
 const { Text } = Typography

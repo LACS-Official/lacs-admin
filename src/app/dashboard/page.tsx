@@ -13,7 +13,6 @@ import {
   Typography,
   Modal,
   Menu,
-  Avatar,
   Spin,
   Alert,
   Tooltip,
@@ -21,7 +20,6 @@ import {
 } from 'antd'
 import {
   PlusOutlined,
-  SearchOutlined,
   EditOutlined,
   DeleteOutlined,
   FileTextOutlined,
@@ -30,14 +28,12 @@ import {
   LockOutlined,
   UnlockOutlined,
   GithubOutlined,
-  HomeOutlined,
-  FolderOutlined
+  HomeOutlined
 } from '@ant-design/icons'
-import styles from './page.module.css'
 import RepoModal from '@/components/RepoModal'
 import Navigation from '@/components/Navigation'
 
-const { Header, Content, Sider } = Layout
+const { Content, Sider } = Layout
 const { Title, Paragraph, Text } = Typography
 const { Search } = Input
 
@@ -327,7 +323,7 @@ export default function Dashboard() {
 
                 {/* 仓库网格 */}
                 <Row gutter={[24, 24]}>
-                  {filteredRepos.map((repo, index) => (
+                  {filteredRepos.map((repo) => (
                     <Col xs={24} sm={12} lg={8} xl={6} key={repo.id}>
                       <Card
                         hoverable
@@ -426,12 +422,12 @@ export default function Dashboard() {
                           <div style={{ marginBottom: '16px' }}>
                             <Space size={[4, 4]} wrap>
                               {repo.topics.slice(0, 3).map((topic) => (
-                                <Tag key={topic} size="small" color="blue">
+                                <Tag key={topic} color="blue">
                                   {topic}
                                 </Tag>
                               ))}
                               {repo.topics.length > 3 && (
-                                <Tag size="small">+{repo.topics.length - 3}</Tag>
+                                <Tag>+{repo.topics.length - 3}</Tag>
                               )}
                             </Space>
                           </div>

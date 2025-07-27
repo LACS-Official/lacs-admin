@@ -89,7 +89,6 @@ export default function RootLayout({
                 Input: {
                   borderRadius: 8,
                   controlHeight: 40,
-                  paddingInline: 12,
                 },
                 Card: {
                   borderRadius: 12,
@@ -100,7 +99,6 @@ export default function RootLayout({
                   borderRadius: 8,
                   itemBorderRadius: 6,
                   itemHeight: 40,
-                  itemPaddingInline: 16,
                 },
                 Modal: {
                   borderRadius: 12,
@@ -112,7 +110,6 @@ export default function RootLayout({
                 },
                 Tag: {
                   borderRadius: 12,
-                  paddingInline: 8,
                 },
                 Layout: {
                   headerBg: '#ffffff',
