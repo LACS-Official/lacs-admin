@@ -8,7 +8,8 @@ import {
   FileTextOutlined,
   UserOutlined,
   LogoutOutlined,
-  SettingOutlined
+  SettingOutlined,
+  KeyOutlined
 } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
 
@@ -30,6 +31,9 @@ export default function Navigation({ className }: NavigationProps) {
 
   // 获取当前选中的菜单项
   const getSelectedKeys = () => {
+    if (pathname.includes('/activation-codes')) {
+      return ['activation-codes']
+    }
     if (pathname.includes('/hugo')) {
       return ['hugo']
     }
@@ -46,6 +50,12 @@ export default function Navigation({ className }: NavigationProps) {
       icon: <HomeOutlined />,
       label: '仓库管理',
       onClick: () => router.push('/dashboard'),
+    },
+    {
+      key: 'activation-codes',
+      icon: <KeyOutlined />,
+      label: '激活码管理',
+      onClick: () => router.push('/dashboard/activation-codes'),
     },
   ]
 
