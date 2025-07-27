@@ -97,7 +97,7 @@ export type ActivationCodeStatus = 'all' | 'used' | 'unused' | 'expired' | 'acti
 export class ActivationCodeApiClient {
   private baseUrl: string
 
-  constructor(baseUrl = 'https://api-g.lacs.cc/api') {
+  constructor(baseUrl = '/api') {
     this.baseUrl = baseUrl.replace(/\/$/, '') // 移除末尾斜杠
   }
 
@@ -203,7 +203,7 @@ export class ActivationCodeApiClient {
       method: 'GET',
       headers: this.getHeaders(),
     })
-    
+
     return this.handleResponse<ActivationCodeListResponse>(response)
   }
 
@@ -239,7 +239,7 @@ export class ActivationCodeApiClient {
       method: 'GET',
       headers: this.getHeaders(),
     })
-    
+
     return this.handleResponse<ActivationCodeStats>(response)
   }
 
@@ -261,7 +261,7 @@ export class ActivationCodeApiClient {
 }
 
 // 创建全局实例
-export const activationCodeApi = new ActivationCodeApiClient('https://api-g.lacs.cc/api')
+export const activationCodeApi = new ActivationCodeApiClient('/api')
 
 // 工具函数：格式化激活码状态
 export function getActivationCodeStatusText(code: ActivationCode): string {
