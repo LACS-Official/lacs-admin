@@ -34,8 +34,7 @@ export default function ApiTestPage() {
       <Card>
         <Title level={2}>API配置测试</Title>
         <Paragraph>
-          测试激活码API配置。前端请求 <Text code>/api/activation-codes</Text>，
-          通过Next.js重写规则转发到 <Text code>https://api-g.lacs.cc/api/activation-codes</Text>
+          测试激活码API配置。直接请求 <Text code>https://api-g.lacs.cc/api/activation-codes</Text>
         </Paragraph>
         
         <Space direction="vertical" style={{ width: '100%' }}>
