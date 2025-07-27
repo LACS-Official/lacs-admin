@@ -1,7 +1,24 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import {
+  Modal,
+  Form,
+  Input,
+  Select,
+  Switch,
+  Tag,
+  Space,
+  Button,
+  Row,
+  Col,
+  message
+} from 'antd'
+import { PlusOutlined } from '@ant-design/icons'
 import styles from './RepoModal.module.css'
+
+const { TextArea } = Input
+const { Option } = Select
 
 interface GitHubRepo {
   id: string
@@ -25,198 +42,198 @@ interface RepoModalProps {
 }
 
 export default function RepoModal({ isOpen, onClose, onSave, repo, mode }: RepoModalProps) {
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    url: '',
-    language: 'JavaScript',
-    isPrivate: false,
-    topics: [] as string[]
-  })
+  const [form] = Form.useForm()
+  const [topics, setTopics] = useState<string[]>([])
   const [topicInput, setTopicInput] = useState('')
 
   useEffect(() => {
     if (repo && mode === 'edit') {
-      setFormData({
+      form.setFieldsValue({
         name: repo.name,
         description: repo.description,
         url: repo.url,
         language: repo.language,
         isPrivate: repo.isPrivate,
-        topics: [...repo.topics]
       })
+      setTopics([...repo.topics])
     } else {
-      setFormData({
-        name: '',
-        description: '',
-        url: '',
-        language: 'JavaScript',
-        isPrivate: false,
-        topics: []
-      })
+      form.resetFields()
+      setTopics([])
     }
-  }, [repo, mode, isOpen])
+  }, [repo, mode, isOpen, form])
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    const repoData: Partial<GitHubRepo> = {
-      ...formData,
-      id: repo?.id || Date.now().toString(),
-      stars: repo?.stars || 0,
-      forks: repo?.forks || 0,
-      lastUpdated: new Date().toISOString().split('T')[0]
+  const handleSubmit = async (values: any) => {
+    try {
+      const repoData: Partial<GitHubRepo> = {
+        ...values,
+        topics,
+        id: repo?.id || Date.now().toString(),
+        stars: repo?.stars || 0,
+        forks: repo?.forks || 0,
+        lastUpdated: new Date().toISOString().split('T')[0]
+      }
+
+      onSave(repoData)
+      onClose()
+      message.success(mode === 'add' ? '仓库添加成功' : '仓库更新成功')
+    } catch (error) {
+      message.error('操作失败，请重试')
     }
-    
-    onSave(repoData)
-    onClose()
   }
 
-  const handleTopicAdd = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && topicInput.trim()) {
-      e.preventDefault()
-      if (!formData.topics.includes(topicInput.trim())) {
-        setFormData(prev => ({
-          ...prev,
-          topics: [...prev.topics, topicInput.trim()]
-        }))
-      }
+  const handleTopicAdd = () => {
+    if (topicInput.trim() && !topics.includes(topicInput.trim())) {
+      setTopics([...topics, topicInput.trim()])
       setTopicInput('')
     }
   }
 
   const handleTopicRemove = (topicToRemove: string) => {
-    setFormData(prev => ({
-      ...prev,
-      topics: prev.topics.filter(topic => topic !== topicToRemove)
-    }))
+    setTopics(topics.filter(topic => topic !== topicToRemove))
   }
 
-  if (!isOpen) return null
+  const handleTopicInputKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleTopicAdd()
+    }
+  }
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.header}>
-          <h2>{mode === 'add' ? '添加新仓库' : '编辑仓库'}</h2>
-          <button className={styles.closeButton} onClick={onClose}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
+    <Modal
+      title={mode === 'add' ? '添加新仓库' : '编辑仓库'}
+      open={isOpen}
+      onCancel={onClose}
+      footer={null}
+      width={600}
+      destroyOnHidden
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleSubmit}
+        initialValues={{
+          language: 'JavaScript',
+          isPrivate: false,
+        }}
+      >
+        <Form.Item
+          label="仓库名称"
+          name="name"
+          rules={[{ required: true, message: '请输入仓库名称' }]}
+        >
+          <Input placeholder="输入仓库名称" />
+        </Form.Item>
 
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <div className={styles.formGroup}>
-            <label htmlFor="name">仓库名称 *</label>
-            <input
-              id="name"
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              required
-              placeholder="输入仓库名称"
-            />
-          </div>
+        <Form.Item
+          label="描述"
+          name="description"
+        >
+          <TextArea
+            placeholder="输入仓库描述"
+            rows={3}
+            showCount
+            maxLength={200}
+          />
+        </Form.Item>
 
-          <div className={styles.formGroup}>
-            <label htmlFor="description">描述</label>
-            <textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="输入仓库描述"
-              rows={3}
-            />
-          </div>
+        <Form.Item
+          label="仓库URL"
+          name="url"
+          rules={[
+            { required: true, message: '请输入仓库URL' },
+            { type: 'url', message: '请输入有效的URL' }
+          ]}
+        >
+          <Input placeholder="https://github.com/username/repository" />
+        </Form.Item>
 
-          <div className={styles.formGroup}>
-            <label htmlFor="url">仓库URL *</label>
-            <input
-              id="url"
-              type="url"
-              value={formData.url}
-              onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
-              required
-              placeholder="https://github.com/username/repository"
-            />
-          </div>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              label="主要语言"
+              name="language"
+            >
+              <Select placeholder="选择主要语言">
+                <Option value="JavaScript">JavaScript</Option>
+                <Option value="TypeScript">TypeScript</Option>
+                <Option value="Python">Python</Option>
+                <Option value="Go">Go</Option>
+                <Option value="Java">Java</Option>
+                <Option value="C++">C++</Option>
+                <Option value="HTML">HTML</Option>
+                <Option value="CSS">CSS</Option>
+                <Option value="PHP">PHP</Option>
+                <Option value="Ruby">Ruby</Option>
+                <Option value="Rust">Rust</Option>
+                <Option value="Swift">Swift</Option>
+                <Option value="Kotlin">Kotlin</Option>
+                <Option value="Other">其他</Option>
+              </Select>
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              label="仓库类型"
+              name="isPrivate"
+              valuePropName="checked"
+            >
+              <Switch
+                checkedChildren="私有"
+                unCheckedChildren="公开"
+              />
+            </Form.Item>
+          </Col>
+        </Row>
 
-          <div className={styles.formRow}>
-            <div className={styles.formGroup}>
-              <label htmlFor="language">主要语言</label>
-              <select
-                id="language"
-                value={formData.language}
-                onChange={(e) => setFormData(prev => ({ ...prev, language: e.target.value }))}
+        <Form.Item label="标签">
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Space.Compact style={{ width: '100%' }}>
+              <Input
+                placeholder="输入标签后点击添加"
+                value={topicInput}
+                onChange={(e) => setTopicInput(e.target.value)}
+                onKeyPress={handleTopicInputKeyPress}
+              />
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleTopicAdd}
               >
-                <option value="JavaScript">JavaScript</option>
-                <option value="TypeScript">TypeScript</option>
-                <option value="Python">Python</option>
-                <option value="Go">Go</option>
-                <option value="Java">Java</option>
-                <option value="C++">C++</option>
-                <option value="HTML">HTML</option>
-                <option value="CSS">CSS</option>
-                <option value="PHP">PHP</option>
-                <option value="Ruby">Ruby</option>
-                <option value="Rust">Rust</option>
-                <option value="Swift">Swift</option>
-                <option value="Kotlin">Kotlin</option>
-                <option value="Other">其他</option>
-              </select>
-            </div>
+                添加
+              </Button>
+            </Space.Compact>
 
-            <div className={styles.formGroup}>
-              <label className={styles.checkboxLabel}>
-                <input
-                  type="checkbox"
-                  checked={formData.isPrivate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, isPrivate: e.target.checked }))}
-                />
-                <span className={styles.checkboxCustom}></span>
-                私有仓库
-              </label>
-            </div>
-          </div>
+            {topics.length > 0 && (
+              <div>
+                <Space size={[8, 8]} wrap>
+                  {topics.map((topic) => (
+                    <Tag
+                      key={topic}
+                      closable
+                      onClose={() => handleTopicRemove(topic)}
+                      color="blue"
+                    >
+                      {topic}
+                    </Tag>
+                  ))}
+                </Space>
+              </div>
+            )}
+          </Space>
+        </Form.Item>
 
-          <div className={styles.formGroup}>
-            <label htmlFor="topics">标签</label>
-            <input
-              id="topics"
-              type="text"
-              value={topicInput}
-              onChange={(e) => setTopicInput(e.target.value)}
-              onKeyDown={handleTopicAdd}
-              placeholder="输入标签后按回车添加"
-            />
-            <div className={styles.topics}>
-              {formData.topics.map((topic) => (
-                <span key={topic} className={styles.topic}>
-                  {topic}
-                  <button
-                    type="button"
-                    onClick={() => handleTopicRemove(topic)}
-                    className={styles.topicRemove}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className={styles.actions}>
-            <button type="button" onClick={onClose} className={styles.cancelButton}>
+        <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
+          <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+            <Button onClick={onClose}>
               取消
-            </button>
-            <button type="submit" className={`${styles.saveButton} btn btn-primary`}>
+            </Button>
+            <Button type="primary" htmlType="submit">
               {mode === 'add' ? '添加仓库' : '保存更改'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+            </Button>
+          </Space>
+        </Form.Item>
+      </Form>
+    </Modal>
   )
 }
