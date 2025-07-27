@@ -13,8 +13,7 @@ import {
   Alert
 } from 'antd'
 import {
-  ArrowLeftOutlined,
-  BarChartOutlined
+  ArrowLeftOutlined
 } from '@ant-design/icons'
 import Navigation from '@/components/Navigation'
 import ActivationCodeStats from '@/components/ActivationCodeStats'

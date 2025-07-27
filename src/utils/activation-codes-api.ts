@@ -113,7 +113,7 @@ export class ActivationCodeApiClient {
     
     try {
       responseData = await response.json()
-    } catch (error) {
+    } catch {
       throw {
         status: response.status,
         message: `网络错误: 无法解析服务器响应`,

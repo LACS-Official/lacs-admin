@@ -26,7 +26,7 @@ import {
   type ActivationCodeApiError
 } from '@/utils/activation-codes-api'
 
-const { Title, Text } = Typography
+const { Text } = Typography
 
 interface ActivationCodeStatsProps {
   onRefresh?: () => void

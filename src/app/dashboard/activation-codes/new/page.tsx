@@ -21,8 +21,7 @@ import {
 import {
   ArrowLeftOutlined,
   SaveOutlined,
-  PlusOutlined,
-  DeleteOutlined
+  PlusOutlined
 } from '@ant-design/icons'
 import Navigation from '@/components/Navigation'
 import {
@@ -107,7 +106,7 @@ export default function NewActivationCodePage() {
         try {
           const customData = JSON.parse(formData.customMetadata)
           Object.assign(metadata, customData)
-        } catch (error) {
+        } catch {
           message.error('自定义元数据格式错误，请使用有效的JSON格式')
           setLoading(false)
           return
@@ -119,8 +118,8 @@ export default function NewActivationCodePage() {
       }
 
       // 调用API创建激活码
-      const result = await activationCodeApi.createActivationCode(request)
-      
+      await activationCodeApi.createActivationCode(request)
+
       message.success('激活码创建成功！')
       
       // 跳转回列表页面
@@ -291,7 +290,7 @@ export default function NewActivationCodePage() {
                   <Form.Item
                     label="自定义元数据"
                     name="customMetadata"
-                    help="请输入有效的JSON格式数据，例如：{\"key\": \"value\"}"
+                    help='请输入有效的JSON格式数据，例如：{"key": "value"}'
                   >
                     <TextArea
                       rows={4}

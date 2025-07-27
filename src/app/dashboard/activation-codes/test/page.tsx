@@ -16,7 +16,7 @@ import {
 } from 'antd'
 import {
   ArrowLeftOutlined,
-  TestOutlined,
+  ExperimentOutlined,
   CheckOutlined,
   CloseOutlined
 } from '@ant-design/icons'
@@ -175,7 +175,7 @@ export default function ActivationCodeTestPage() {
               <Space wrap>
                 <Button
                   type="primary"
-                  icon={<TestOutlined />}
+                  icon={<ExperimentOutlined />}
                   onClick={runAllTests}
                   loading={loading}
                 >

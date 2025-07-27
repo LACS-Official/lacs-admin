@@ -13,10 +13,8 @@ import {
   Col,
   Typography,
   Modal,
-  Spin,
   Alert,
   Tooltip,
-  Badge,
   Table,
   Select,
   Pagination,
@@ -25,7 +23,6 @@ import {
 } from 'antd'
 import {
   PlusOutlined,
-  EditOutlined,
   DeleteOutlined,
   EyeOutlined,
   ReloadOutlined,
@@ -39,7 +36,7 @@ import {
 import type { ColumnsType } from 'antd/es/table'
 import Navigation from '@/components/Navigation'
 import { ErrorBoundary, EmptyState, NetworkError } from '@/components/ErrorBoundary'
-import { PageLoading, TableLoading, StatisticLoading } from '@/components/LoadingState'
+import { PageLoading, StatisticLoading } from '@/components/LoadingState'
 import {
   activationCodeApi,
   type ActivationCode,
@@ -52,7 +49,7 @@ import {
   type ActivationCodeApiError
 } from '@/utils/activation-codes-api'
 
-const { Content, Sider } = Layout
+const { Content } = Layout
 const { Title, Paragraph, Text } = Typography
 const { Search } = Input
 const { Option } = Select
@@ -72,8 +69,6 @@ export default function ActivationCodesPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [total, setTotal] = useState(0)
-  const [selectedCode, setSelectedCode] = useState<ActivationCode | null>(null)
-  const [showDetailModal, setShowDetailModal] = useState(false)
 
   // 加载激活码列表
   const loadActivationCodes = async (page = currentPage, limit = pageSize, status = statusFilter) => {
@@ -113,13 +108,13 @@ export default function ActivationCodesPage() {
   useEffect(() => {
     loadActivationCodes()
     loadStats()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 状态筛选变化
   useEffect(() => {
     setCurrentPage(1)
     loadActivationCodes(1, pageSize, statusFilter)
-  }, [statusFilter])
+  }, [statusFilter]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 搜索功能
   const handleSearch = (value: string) => {
@@ -223,7 +218,7 @@ export default function ActivationCodesPage() {
               {record.code}
             </Text>
           </div>
-          <Tag color={getActivationCodeStatusColor(record)} size="small">
+          <Tag color={getActivationCodeStatusColor(record)}>
             {getActivationCodeStatusText(record)}
           </Tag>
           {record.productInfo && (

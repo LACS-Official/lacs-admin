@@ -15,8 +15,7 @@ import {
   Alert,
   Spin,
   message,
-  Modal,
-  Divider
+  Modal
 } from 'antd'
 import {
   ArrowLeftOutlined,
@@ -39,7 +38,7 @@ import {
 } from '@/utils/activation-codes-api'
 
 const { Content } = Layout
-const { Title, Paragraph, Text } = Typography
+const { Title, Text } = Typography
 const { confirm } = Modal
 
 export default function ActivationCodeDetailPage() {
@@ -72,7 +71,7 @@ export default function ActivationCodeDetailPage() {
 
   useEffect(() => {
     loadActivationCode()
-  }, [id])
+  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 复制激活码
   const handleCopyCode = () => {
