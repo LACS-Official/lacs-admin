@@ -163,7 +163,7 @@ export default function ActivationCodeTestPage() {
 
           <Alert
             message="测试说明"
-            description="此页面用于测试激活码管理系统的功能。请确保后端API服务正在运行。"
+            description="此页面用于测试激活码管理系统的功能。API服务器地址：https://api-g.lacs.cc/api"
             type="info"
             showIcon
             style={{ marginBottom: '24px' }}
