@@ -9,6 +9,13 @@ export interface ActivationCodeApiError {
   error: string
 }
 
+// API验证信息接口
+export interface ApiValidationInfo {
+  expiresAt: string
+  remainingTime: number
+  message: string
+}
+
 // 激活码数据接口
 export interface ActivationCode {
   id: string
@@ -18,6 +25,8 @@ export interface ActivationCode {
   isUsed: boolean
   usedAt?: string
   isExpired?: boolean
+  activatedAt?: string
+  apiValidation?: ApiValidationInfo
   metadata?: {
     customerEmail?: string
     licenseType?: string
@@ -89,6 +98,25 @@ export interface VerifyActivationCodeRequest {
 // 清理过期激活码请求接口
 export interface CleanupExpiredCodesRequest {
   daysOld?: number
+}
+
+// 清理未使用激活码请求接口
+export interface CleanupUnusedCodesRequest {
+  minutesOld?: number
+}
+
+// 清理未使用激活码响应接口
+export interface CleanupUnusedCodesResponse {
+  message: string
+  deletedCount: number
+  minutesOld: number
+  cleanupTime: string
+  deletedCodes: Array<{
+    id: string
+    code: string
+    createdAt: string
+    expiresAt: string
+  }>
 }
 
 // 激活码状态枚举
@@ -255,8 +283,57 @@ export class ActivationCodeApiClient {
       headers: this.getHeaders(),
       body: JSON.stringify(request),
     })
-    
+
     return this.handleResponse<{ message: string; deletedCount: number }>(response)
+  }
+
+  /**
+   * 清理未使用的激活码
+   */
+  async cleanupUnusedCodes(request: CleanupUnusedCodesRequest = {}): Promise<CleanupUnusedCodesResponse> {
+    const response = await fetch(`${this.baseUrl}/activation-codes/cleanup-unused`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(request),
+    })
+
+    return this.handleResponse<CleanupUnusedCodesResponse>(response)
+  }
+
+  /**
+   * 预览将要被清理的未使用激活码
+   */
+  async previewUnusedCodesCleanup(minutesOld: number = 5): Promise<{
+    message: string
+    count: number
+    minutesOld: number
+    cutoffTime: string
+    codes: Array<{
+      id: string
+      code: string
+      createdAt: string
+      expiresAt: string
+      minutesSinceCreation: number
+    }>
+  }> {
+    const response = await fetch(`${this.baseUrl}/activation-codes/cleanup-unused?minutesOld=${minutesOld}`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    })
+
+    return this.handleResponse<{
+      message: string
+      count: number
+      minutesOld: number
+      cutoffTime: string
+      codes: Array<{
+        id: string
+        code: string
+        createdAt: string
+        expiresAt: string
+        minutesSinceCreation: number
+      }>
+    }>(response)
   }
 }
 

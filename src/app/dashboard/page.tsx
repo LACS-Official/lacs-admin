@@ -28,7 +28,9 @@ import {
   LockOutlined,
   UnlockOutlined,
   GithubOutlined,
-  HomeOutlined
+  HomeOutlined,
+  AppstoreOutlined,
+  NotificationOutlined
 } from '@ant-design/icons'
 import RepoModal from '@/components/RepoModal'
 import Navigation from '@/components/Navigation'
@@ -129,6 +131,7 @@ export default function Dashboard() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedMenuKey, setSelectedMenuKey] = useState('repos')
 
   // 过滤仓库
   const filteredRepos = repos.filter(repo =>
@@ -171,6 +174,33 @@ export default function Dashboard() {
     if (repo.name === 'appwebsite-hugo') {
       // 跳转到Hugo文章管理页面
       window.location.href = `/dashboard/hugo/${repo.id}`
+    }
+  }
+
+  // 处理菜单点击
+  const handleMenuClick = (key: string) => {
+    setSelectedMenuKey(key)
+    switch (key) {
+      case 'software':
+        window.location.href = '/dashboard/software'
+        break
+      case 'announcements':
+        window.location.href = '/dashboard/announcements'
+        break
+      case 'activation-codes':
+        window.location.href = '/dashboard/activation-codes'
+        break
+      case 'hugo':
+        // 查找 appwebsite-hugo 仓库
+        const hugoRepo = repos.find(repo => repo.name === 'appwebsite-hugo')
+        if (hugoRepo) {
+          window.location.href = `/dashboard/hugo/${hugoRepo.id}`
+        } else {
+          message.warning('未找到 appwebsite-hugo 仓库')
+        }
+        break
+      default:
+        break
     }
   }
 
@@ -243,8 +273,9 @@ export default function Dashboard() {
         >
           <Menu
             mode="inline"
-            defaultSelectedKeys={['repos']}
+            selectedKeys={[selectedMenuKey]}
             style={{ height: '100%', borderRight: 0, paddingTop: '16px' }}
+            onClick={({ key }) => handleMenuClick(key)}
             items={[
               {
                 key: 'overview',
@@ -260,6 +291,21 @@ export default function Dashboard() {
                 key: 'hugo',
                 icon: <FileTextOutlined />,
                 label: 'Hugo文章',
+              },
+              {
+                key: 'software',
+                icon: <AppstoreOutlined />,
+                label: '软件管理',
+              },
+              {
+                key: 'announcements',
+                icon: <NotificationOutlined />,
+                label: '公告管理',
+              },
+              {
+                key: 'activation-codes',
+                icon: <FileTextOutlined />,
+                label: '激活码管理',
               },
             ]}
           />

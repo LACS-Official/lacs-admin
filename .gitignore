@@ -93,6 +93,10 @@ deploy.bat
 /docs/build/
 /storybook-static/
 
+# exclude docs and tests folders
+/docs/
+/tests/
+
 # local development
 .local/
 local-*
