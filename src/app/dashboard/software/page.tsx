@@ -186,7 +186,7 @@ export default function SoftwareManagement() {
     {
       title: '操作',
       key: 'action',
-      render: (text: any, record: Software) => (
+      render: (_: unknown, record: Software) => (
         <Space size="middle">
           <Tooltip title="查看详情">
             <Link href={`/dashboard/software/${record.id}`}>

@@ -247,7 +247,7 @@ export default function AnnouncementManagement() {
     {
       title: '操作',
       key: 'action',
-      render: (text: any, record: Announcement) => (
+      render: (_: unknown, record: Announcement) => (
         <Space size="middle">
           <Link href={`/dashboard/announcements/${record.softwareId}/${record.id}`}>
             <Button type="link" icon={<EditOutlined />} size="small">

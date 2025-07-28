@@ -220,7 +220,7 @@ export default function SoftwareDetail() {
     {
       title: '操作',
       key: 'action',
-      render: (text: any, record: VersionHistory) => (
+      render: (_: unknown, record: VersionHistory) => (
         <Space>
           {record.downloadUrl && (
             <Button 
